@@ -45,12 +45,19 @@ import {
   toggleIdInList,
   updateCartItemQuantity,
 } from '../utils/storeLogic';
+import {
+  checkAdminSession,
+  clearAdminSession,
+  verifyAdminCredentials,
+  changeAdminPassword as changeAdminPassUtil,
+} from '../utils/adminAuth';
 
 const LOCAL_CART_KEY = 'lavka_zombie_cart_v1';
 const LOCAL_ORDERS_KEY = 'lavka_zombie_recent_orders_v1';
 const LOCAL_FITTINGS_KEY = 'lavka_zombie_fittings_v1';
 const LOCAL_FITTING_NOTES_KEY = 'lavka_zombie_fitting_notes_v1';
 const LOCAL_WISHLIST_KEY = 'lavka_zombie_wishlist_v1';
+const LOCAL_STOCK_OVERRIDES_KEY = 'zombie_stock_overrides_v1';
 
 interface StoreContextValue {
   // Auth
@@ -60,6 +67,13 @@ interface StoreContextValue {
   authError: string | null;
   signInWithGoogle: () => Promise<void>;
   signOutUser: () => Promise<void>;
+  loginAdminWithPassword: (
+    username: string,
+    password: string,
+    rememberMe?: boolean
+  ) => Promise<{ success: boolean; error?: string }>;
+  logoutAdmin: () => void;
+  changeAdminPassword: (newPassword: string) => Promise<boolean>;
 
   // Catalog
   products: Product[]; // Published storefront products only
@@ -149,8 +163,17 @@ function createSafeDocId(prefix: string): string {
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => checkAdminSession());
   const [authError, setAuthError] = useState<string | null>(null);
+
+  const [stockOverrides, setStockOverrides] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = window.localStorage.getItem(LOCAL_STOCK_OVERRIDES_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
 
   const [publishedFirestoreProducts, setPublishedFirestoreProducts] = useState<Product[]>([]);
   const [adminFirestoreProducts, setAdminFirestoreProducts] = useState<Product[]>([]);
@@ -220,7 +243,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setAuthError(null);
 
       if (!nextUser) {
-        setIsAdmin(false);
+        if (!checkAdminSession()) {
+          setIsAdmin(false);
+        } else {
+          setIsAdmin(true);
+        }
         setAuthReady(true);
         return;
       }
@@ -366,8 +393,30 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     !productsLoading &&
     publishedFirestoreProducts.length === 0 &&
     adminFirestoreProducts.length === 0;
-  const products = usingFallbackSeed ? SEED_PRODUCTS : publishedFirestoreProducts;
-  const adminProducts = usingFallbackSeed ? SEED_PRODUCTS : adminFirestoreProducts;
+
+  const baseProducts = usingFallbackSeed
+    ? SEED_PRODUCTS
+    : publishedFirestoreProducts.length > 0
+    ? publishedFirestoreProducts
+    : SEED_PRODUCTS;
+
+  const baseAdminProducts = usingFallbackSeed
+    ? SEED_PRODUCTS
+    : adminFirestoreProducts.length > 0
+    ? adminFirestoreProducts
+    : SEED_PRODUCTS;
+
+  const products = useMemo(() => {
+    return baseProducts.map((p) =>
+      stockOverrides[p.id] !== undefined ? { ...p, inStock: stockOverrides[p.id] } : p
+    );
+  }, [baseProducts, stockOverrides]);
+
+  const adminProducts = useMemo(() => {
+    return baseAdminProducts.map((p) =>
+      stockOverrides[p.id] !== undefined ? { ...p, inStock: stockOverrides[p.id] } : p
+    );
+  }, [baseAdminProducts, stockOverrides]);
 
   const cartSummary = useMemo(() => calculateCartSummary(cart), [cart]);
 
@@ -392,6 +441,31 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setUserOrders(loadLocalArray<Order>(LOCAL_ORDERS_KEY));
     showToast('Вы вышли из аккаунта');
   }, [showToast]);
+
+  const loginAdminWithPassword = useCallback(
+    async (username: string, password: string, rememberMe = true) => {
+      setAuthError(null);
+      const res = await verifyAdminCredentials(username, password, rememberMe);
+      if (res.success) {
+        setIsAdmin(true);
+        showToast('Вы успешно вошли в панель управления');
+      } else if (res.error) {
+        setAuthError(res.error);
+      }
+      return res;
+    },
+    [showToast]
+  );
+
+  const logoutAdmin = useCallback(() => {
+    clearAdminSession();
+    setIsAdmin(false);
+    showToast('Вы вышли из панели администратора');
+  }, [showToast]);
+
+  const changeAdminPassword = useCallback(async (newPass: string) => {
+    return changeAdminPassUtil(newPass);
+  }, []);
 
   const addToCart = useCallback(
     (product: Product, size: ProductSize, quantity = 1) => {
@@ -648,16 +722,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setProductInStock = useCallback(
     async (productId: string, inStock: boolean) => {
+      // 1. Instantly update local override and persist in localStorage
+      setStockOverrides((prev) => {
+        const next = { ...prev, [productId]: inStock };
+        try {
+          window.localStorage.setItem(LOCAL_STOCK_OVERRIDES_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      showToast(
+        inStock ? 'Товар отмечен: «В наличии»' : 'Товар отмечен: «ПРОДАНО»'
+      );
+
+      // 2. Best-effort Firestore update in background
       try {
         await updateDoc(doc(db, 'products', productId), {
           inStock,
           updatedAt: serverTimestamp(),
         });
-        showToast(
-          inStock ? 'Товар отмечен: «В наличии»' : 'Товар отмечен: «ПРОДАНО»'
-        );
       } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, `products/${productId}`);
+        console.warn('Firestore stock sync offline fallback:', error);
       }
     },
     [showToast]
@@ -805,6 +890,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     authError,
     signInWithGoogle,
     signOutUser,
+    loginAdminWithPassword,
+    logoutAdmin,
+    changeAdminPassword,
     products,
     adminProducts,
     productsLoading,

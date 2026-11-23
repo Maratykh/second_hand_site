@@ -34,6 +34,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   const [stockFilter, setStockFilter] = useState<'all' | 'inStock' | 'sold'>(
     initialInStock === true ? 'inStock' : 'all'
   );
+  const [visibleLimit, setVisibleLimit] = useState(48);
 
   const filteredProducts = useMemo(() => {
     let result = products.slice();
@@ -283,16 +284,30 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {filteredProducts.map((product, idx) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              index={idx}
-              onSelect={(id) => onNavigate({ page: 'product', productId: id })}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {filteredProducts.slice(0, visibleLimit).map((product, idx) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                index={idx}
+                onSelect={(id) => onNavigate({ page: 'product', productId: id })}
+              />
+            ))}
+          </div>
+
+          {filteredProducts.length > visibleLimit && (
+            <div className="text-center pt-8">
+              <button
+                type="button"
+                onClick={() => setVisibleLimit((prev) => prev + 48)}
+                className="px-8 py-3 bg-[#18181B] border border-zinc-700 hover:border-[#A3E635] text-white hover:text-[#A3E635] text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+              >
+                Загрузить ещё ({visibleLimit} из {filteredProducts.length})
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
