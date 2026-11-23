@@ -63,6 +63,11 @@ function routeToHash(route: AppRoute): string {
       return '#/about';
     case 'admin':
       return '#/admin';
+    case 'cart':
+    case 'checkout':
+      return '#/fittings';
+    default:
+      return '#/';
   }
 }
 

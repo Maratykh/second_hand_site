@@ -9,6 +9,8 @@ export type AppRoute =
   | { page: 'product'; productId: string }
   | { page: 'fittings'; tab?: 'fittings' | 'favorites' }
   | { page: 'about' }
+  | { page: 'cart' }
+  | { page: 'checkout' }
   | { page: 'admin' };
 
 interface HeaderProps {

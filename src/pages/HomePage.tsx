@@ -36,10 +36,17 @@ const HOW_TO_ORDER_STEPS = [
 ];
 
 export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
-  const { products, productsLoading } = useStore();
+  const { products, productsLoading, heroSettings } = useStore();
 
-  const newArrivals = products.filter((p) => p.featured).slice(0, 4);
-  const displayArrivals = newArrivals.length > 0 ? newArrivals : products.slice(0, 4);
+  const displayArrivals = React.useMemo(() => {
+    if (heroSettings?.featuredProductIds && heroSettings.featuredProductIds.length > 0) {
+      const idSet = new Set(heroSettings.featuredProductIds);
+      const matched = products.filter((p) => idSet.has(p.id));
+      if (matched.length > 0) return matched.slice(0, 4);
+    }
+    const newArrivals = products.filter((p) => p.featured).slice(0, 4);
+    return newArrivals.length > 0 ? newArrivals : products.slice(0, 4);
+  }, [products, heroSettings?.featuredProductIds]);
 
   const categoryCounts = PRODUCT_CATEGORIES.map((cat) => ({
     ...cat,
@@ -55,13 +62,14 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             <div className="lg:col-span-5 flex flex-col justify-between py-2 space-y-8">
               <div className="space-y-5">
                 <p className="text-xs font-medium tracking-[0.14em] uppercase text-zinc-400">
-                  Минск · ул. Веры Хоружей 3, оф. 308
+                  {heroSettings?.badge || 'Минск · ул. Веры Хоружей 3, оф. 308'}
                 </p>
                 <h1 className="font-display text-[clamp(2.25rem,4vw,3.6rem)] font-bold leading-[1.12] tracking-tight text-white uppercase">
-                  Селективный винтаж без лишней наценки
+                  {heroSettings?.title || 'Селективный винтаж без лишней наценки'}
                 </h1>
                 <p className="text-base text-zinc-400 leading-relaxed max-w-md">
-                  {BRAND_INFO.tagline} Архивная кожа, тяжёлый хлопок 90-х и честный деним — в одном экземпляре.
+                  {heroSettings?.description ||
+                    `${BRAND_INFO.tagline} Архивная кожа, тяжёлый хлопок 90-х и честный деним — в одном экземпляре.`}
                 </p>
               </div>
 
@@ -100,7 +108,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
 
             <div className="lg:col-span-7 relative min-h-[300px] sm:min-h-[420px] bg-[#141417] border border-zinc-800/80 overflow-hidden">
               <SafeImage
-                src={HERO_BANNER_IMAGE}
+                src={heroSettings?.bannerImage || HERO_BANNER_IMAGE}
                 alt="Шоурум винтажной одежды Лавка Зомби в Минске"
                 className="w-full h-full object-cover lg:absolute lg:inset-0"
                 fallbackLabel="Лавка Зомби — Шоурум Минск"

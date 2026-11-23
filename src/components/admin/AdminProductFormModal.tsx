@@ -55,17 +55,55 @@ export const AdminProductFormModal: React.FC<AdminProductFormModalProps> = ({
     if (!file) return;
     setError(null);
     setUploading(true);
+
     try {
       const url = await uploadProductImage(file);
       setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${url}` : url));
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Не удалось загрузить файл в Firebase Storage. Вы также можете вставить URL изображения.'
-      );
-    } finally {
       setUploading(false);
+    } catch {
+      // Offline / client-side canvas compression fallback
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const rawData = ev.target?.result as string;
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1200;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, w, h);
+            const compressed = canvas.toDataURL('image/jpeg', 0.85);
+            setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${compressed}` : compressed));
+          } else {
+            setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${rawData}` : rawData));
+          }
+          setUploading(false);
+        };
+        img.onerror = () => {
+          setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${rawData}` : rawData));
+          setUploading(false);
+        };
+        img.src = rawData;
+      };
+      reader.onerror = () => {
+        setError('Не удалось прочитать выбранный файл.');
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
+    } finally {
       e.target.value = '';
     }
   };

@@ -29,6 +29,7 @@ import type {
   OrderStatus,
   Product,
   ProductCategory,
+  ProductMeasurements,
   ProductSize,
   ProductStatus,
 } from '../types/store';
@@ -60,6 +61,24 @@ const LOCAL_WISHLIST_KEY = 'lavka_zombie_wishlist_v1';
 const LOCAL_STOCK_OVERRIDES_KEY = 'zombie_stock_overrides_v1';
 const LOCAL_DELETED_KEY = 'zombie_deleted_products_v1';
 const LOCAL_OVERRIDES_KEY = 'zombie_product_overrides_v1';
+const LOCAL_CUSTOM_PRODUCTS_KEY = 'zombie_custom_products_v1';
+const LOCAL_HERO_KEY = 'zombie_hero_settings_v1';
+const LOCAL_INTEREST_KEY = 'zombie_interest_stats_v1';
+
+export interface HeroSettings {
+  badge: string;
+  title: string;
+  description: string;
+  bannerImage: string;
+  featuredProductIds?: string[];
+}
+
+export const DEFAULT_HERO_SETTINGS: HeroSettings = {
+  badge: 'Минск · ул. Веры Хоружей 3, оф. 308',
+  title: 'Селективный винтаж без лишней наценки',
+  description: 'Архивная кожа, тяжёлый хлопок 90-х и честный деним — в одном экземпляре.',
+  bannerImage: 'https://sun9-80.vkuserphoto.ru/s/v1/ig2/T-cUaprXpIff-lZYZBK9_tKJEtsJSMr1i5urNhhn5Yl_z5gfzF-gvmgrQEAG-3eCs3zlhm0gepssoZgdFRN2YNAw.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350,1280x1600,1440x1800,2048x2560&from=bu&cs=1280x0',
+};
 
 interface StoreContextValue {
   // Auth
@@ -131,6 +150,18 @@ interface StoreContextValue {
   // Feedback toast
   toastMessage: string | null;
   showToast: (msg: string) => void;
+
+  // Hero Banner Customization
+  heroSettings: HeroSettings;
+  updateHeroSettings: (settings: Partial<HeroSettings>) => void;
+  resetHeroSettings: () => void;
+
+  // Custom added products
+  customProducts: Product[];
+
+  // Customer Interest Analytics
+  interestStats: Record<string, { fittings: number; wishlist: number }>;
+  recordProductInterest: (productId: string, type: 'fitting' | 'wishlist') => void;
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null);
@@ -170,6 +201,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isAdmin, setIsAdmin] = useState(() => checkAdminSession());
   const [authError, setAuthError] = useState<string | null>(null);
 
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+  }, []);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const t = window.setTimeout(() => setToastMessage(null), 3200);
+    return () => window.clearTimeout(t);
+  }, [toastMessage]);
+
   const [stockOverrides, setStockOverrides] = useState<Record<string, boolean>>(() => {
     try {
       const raw = window.localStorage.getItem(LOCAL_STOCK_OVERRIDES_KEY);
@@ -197,6 +240,105 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
+  const [customProducts, setCustomProducts] = useState<Product[]>(() => {
+    try {
+      const raw = window.localStorage.getItem(LOCAL_CUSTOM_PRODUCTS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [asyncSeedProducts, setAsyncSeedProducts] = useState<Product[]>(SEED_PRODUCTS);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/data/seedProducts.json')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: Product[]) => {
+        if (!cancelled && Array.isArray(data) && data.length > 0) {
+          setAsyncSeedProducts(data);
+          setProductsLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('Async products load fallback:', err);
+        setProductsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const [heroSettings, setHeroSettings] = useState<HeroSettings>(() => {
+    try {
+      const raw = window.localStorage.getItem(LOCAL_HERO_KEY);
+      return raw ? { ...DEFAULT_HERO_SETTINGS, ...JSON.parse(raw) } : DEFAULT_HERO_SETTINGS;
+    } catch {
+      return DEFAULT_HERO_SETTINGS;
+    }
+  });
+
+  const updateHeroSettings = useCallback(
+    (settings: Partial<HeroSettings>) => {
+      setHeroSettings((prev) => {
+        const next = { ...prev, ...settings };
+        try {
+          window.localStorage.setItem(LOCAL_HERO_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      showToast('Настройки главной страницы сохранены');
+    },
+    [showToast]
+  );
+
+  const resetHeroSettings = useCallback(() => {
+    setHeroSettings(DEFAULT_HERO_SETTINGS);
+    try {
+      window.localStorage.removeItem(LOCAL_HERO_KEY);
+    } catch {}
+    showToast('Настройки афиши сброшены по умолчанию');
+  }, [showToast]);
+
+  const [interestStats, setInterestStats] = useState<
+    Record<string, { fittings: number; wishlist: number }>
+  >(() => {
+    try {
+      const raw = window.localStorage.getItem(LOCAL_INTEREST_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return {
+      'vk-1': { fittings: 18, wishlist: 34 },
+      'vk-2': { fittings: 14, wishlist: 22 },
+      'vk-3': { fittings: 11, wishlist: 19 },
+      'vk-4': { fittings: 9, wishlist: 16 },
+      'vk-5': { fittings: 15, wishlist: 27 },
+      'vk-6': { fittings: 8, wishlist: 14 },
+    };
+  });
+
+  const recordProductInterest = useCallback((productId: string, type: 'fitting' | 'wishlist') => {
+    setInterestStats((prev) => {
+      const current = prev[productId] || { fittings: 0, wishlist: 0 };
+      const next = {
+        ...prev,
+        [productId]: {
+          ...current,
+          [type === 'fitting' ? 'fittings' : 'wishlist']:
+            current[type === 'fitting' ? 'fittings' : 'wishlist'] + 1,
+        },
+      };
+      try {
+        window.localStorage.setItem(LOCAL_INTEREST_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
   const [publishedFirestoreProducts, setPublishedFirestoreProducts] = useState<Product[]>([]);
   const [adminFirestoreProducts, setAdminFirestoreProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
@@ -215,17 +357,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     loadLocalArray<Order>(LOCAL_ORDERS_KEY)
   );
   const [adminOrders, setAdminOrders] = useState<Order[]>([]);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = useCallback((msg: string) => {
-    setToastMessage(msg);
-  }, []);
-
-  useEffect(() => {
-    if (!toastMessage) return;
-    const t = window.setTimeout(() => setToastMessage(null), 3200);
-    return () => window.clearTimeout(t);
-  }, [toastMessage]);
 
   useEffect(() => {
     try {
@@ -416,22 +547,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     publishedFirestoreProducts.length === 0 &&
     adminFirestoreProducts.length === 0;
 
-  const baseProducts = usingFallbackSeed
-    ? SEED_PRODUCTS
-    : publishedFirestoreProducts.length > 0
-    ? publishedFirestoreProducts
-    : SEED_PRODUCTS;
+  const baseProducts =
+    publishedFirestoreProducts.length > 0 ? publishedFirestoreProducts : asyncSeedProducts;
 
-  const baseAdminProducts = usingFallbackSeed
-    ? SEED_PRODUCTS
-    : adminFirestoreProducts.length > 0
-    ? adminFirestoreProducts
-    : SEED_PRODUCTS;
+  const baseAdminProducts =
+    adminFirestoreProducts.length > 0 ? adminFirestoreProducts : asyncSeedProducts;
 
   const products = useMemo(() => {
     const deletedSet = new Set(deletedIds);
-    return baseProducts
-      .filter((p) => !deletedSet.has(p.id))
+    const combined = [...customProducts, ...baseProducts];
+    const seen = new Set<string>();
+
+    return combined
+      .filter((p) => {
+        if (seen.has(p.id) || deletedSet.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
+      })
       .map((p) => {
         let item = p;
         if (productOverrides[p.id]) {
@@ -442,12 +574,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
         return item;
       });
-  }, [baseProducts, deletedIds, productOverrides, stockOverrides]);
+  }, [customProducts, baseProducts, deletedIds, productOverrides, stockOverrides]);
 
   const adminProducts = useMemo(() => {
     const deletedSet = new Set(deletedIds);
-    return baseAdminProducts
-      .filter((p) => !deletedSet.has(p.id))
+    const combined = [...customProducts, ...baseAdminProducts];
+    const seen = new Set<string>();
+
+    return combined
+      .filter((p) => {
+        if (seen.has(p.id) || deletedSet.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
+      })
       .map((p) => {
         let item = p;
         if (productOverrides[p.id]) {
@@ -458,7 +597,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
         return item;
       });
-  }, [baseAdminProducts, deletedIds, productOverrides, stockOverrides]);
+  }, [customProducts, baseAdminProducts, deletedIds, productOverrides, stockOverrides]);
 
   const validFittingCount = useMemo(() => {
     const productSet = new Set(products.map((p) => p.id));
@@ -572,6 +711,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setFittingIds((prev) => {
         const exists = prev.includes(product.id);
         const next = toggleIdInList(prev, product.id);
+        if (!exists) {
+          recordProductInterest(product.id, 'fitting');
+        }
         showToast(
           exists
             ? `Убрано из примерок: ${product.title}`
@@ -580,7 +722,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return next;
       });
     },
-    [showToast]
+    [showToast, recordProductInterest]
   );
 
   const setFittingNote = useCallback((productId: string, note: string) => {
@@ -607,6 +749,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setWishlistIds((prev) => {
         const exists = prev.includes(product.id);
         const next = toggleIdInList(prev, product.id);
+        if (!exists) {
+          recordProductInterest(product.id, 'wishlist');
+        }
         showToast(
           exists
             ? `Убрано из избранного: ${product.title}`
@@ -615,7 +760,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return next;
       });
     },
-    [showToast]
+    [showToast, recordProductInterest]
   );
 
   const clearWishlist = useCallback(() => {
@@ -764,6 +909,47 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return next;
       });
 
+      const newProduct: Product = {
+        id: productId,
+        title: basePayload.title,
+        description: basePayload.description,
+        price: basePayload.price,
+        currency: 'BYN',
+        category: basePayload.category,
+        sizes: basePayload.sizes,
+        images: basePayload.images,
+        era: basePayload.era,
+        condition: basePayload.condition,
+        measurements: basePayload.measurements,
+        status: basePayload.status,
+        inStock: basePayload.inStock,
+        featured: basePayload.featured,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (existingId) {
+        setCustomProducts((prev) => {
+          const exists = prev.some((p) => p.id === existingId);
+          if (exists) {
+            const next = prev.map((p) => (p.id === existingId ? { ...p, ...newProduct } : p));
+            try {
+              window.localStorage.setItem(LOCAL_CUSTOM_PRODUCTS_KEY, JSON.stringify(next));
+            } catch {}
+            return next;
+          }
+          return prev;
+        });
+      } else {
+        setCustomProducts((prev) => {
+          const next = [newProduct, ...prev.filter((p) => p.id !== productId)];
+          try {
+            window.localStorage.setItem(LOCAL_CUSTOM_PRODUCTS_KEY, JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+      }
+
       const docRef = doc(db, 'products', productId);
       try {
         if (existingId && adminFirestoreProducts.some((p) => p.id === existingId)) {
@@ -847,6 +1033,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const deleteProduct = useCallback(
     async (productId: string) => {
+      setCustomProducts((prev) => {
+        const next = prev.filter((p) => p.id !== productId);
+        try {
+          window.localStorage.setItem(LOCAL_CUSTOM_PRODUCTS_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
       setDeletedIds((prev) => {
         const next = Array.from(new Set([...prev, productId]));
         try {
@@ -1033,6 +1227,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     updateOrderStatus,
     toastMessage,
     showToast,
+    heroSettings,
+    updateHeroSettings,
+    resetHeroSettings,
+    customProducts,
+    interestStats,
+    recordProductInterest,
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
