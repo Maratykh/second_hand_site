@@ -95,13 +95,10 @@ export const AdminPage: React.FC = () => {
 
     const q = searchQuery.trim().toLowerCase();
     if (q) {
+      const words = q.split(/\s+/).filter(Boolean);
       list = list.filter((p) => {
-        const titleMatch = p.title.toLowerCase().includes(q);
-        const descMatch = (p.description || '').toLowerCase().includes(q);
-        const sizeMatch = p.sizes.some((s) => s.toLowerCase().includes(q));
-        const catMatch = (CATEGORY_LABELS[p.category] || '').toLowerCase().includes(q);
-        const eraMatch = (p.era || '').toLowerCase().includes(q);
-        return titleMatch || descMatch || sizeMatch || catMatch || eraMatch;
+        const fullText = `${p.title} ${p.description || ''} ${p.sizes.join(' ')} ${CATEGORY_LABELS[p.category] || ''} ${p.era || ''}`.toLowerCase();
+        return words.every((w) => fullText.includes(w));
       });
     }
 

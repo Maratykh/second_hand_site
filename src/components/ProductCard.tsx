@@ -135,10 +135,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, ind
                 <span>Заказать у Никиты 🛹</span>
               </a>
             ) : (
-              <div className="w-full min-h-[38px] px-3 py-2 bg-zinc-900 border border-zinc-800 text-zinc-500 text-xs font-mono font-medium inline-flex items-center justify-center gap-1.5 uppercase">
-                <XCircle className="w-3.5 h-3.5" />
-                <span>Продано</span>
-              </div>
+              <a
+                href={`${BRAND_INFO.supportUrl}?text=${encodeURIComponent(
+                  `Привет, Никита! Интересует похожая вещь на эту (уже продана): ${displayTitle} (${product.price} BYN). Есть ли похожее в шоуруме?\nТовар: https://second-hand-sitea.vercel.app/#/product/${product.id}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full min-h-[38px] px-3 py-2 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white text-xs font-mono font-medium inline-flex items-center justify-center gap-1.5 uppercase transition-colors"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span>Спросить у Никиты</span>
+              </a>
             )}
 
             {/* Quick Fitting / Wishlist Toggle */}

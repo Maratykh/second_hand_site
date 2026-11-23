@@ -56,12 +56,13 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
       result = result.filter((p) => !p.inStock);
     }
 
-    // Search (title, description, era, sizes)
+    // Search (title, description, era, sizes) - multi-word match
     const q = search.trim().toLowerCase();
     if (q) {
+      const words = q.split(/\s+/).filter(Boolean);
       result = result.filter((p) => {
         const text = `${p.title} ${p.description} ${p.era} ${p.condition} ${p.sizes.join(' ')}`.toLowerCase();
-        return text.includes(q);
+        return words.every((w) => text.includes(w));
       });
     }
 
@@ -74,6 +75,11 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
 
     return result;
   }, [products, category, size, stockFilter, search, sort]);
+
+  // Reset pagination limit when filters change
+  React.useEffect(() => {
+    setVisibleLimit(48);
+  }, [category, size, stockFilter, search, sort]);
 
   const inStockCount = useMemo(() => products.filter((p) => p.inStock).length, [products]);
   const soldCount = useMemo(() => products.filter((p) => !p.inStock).length, [products]);

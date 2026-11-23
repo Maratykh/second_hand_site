@@ -17,7 +17,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
-  const { fittingIds, isAdmin } = useStore();
+  const { validFittingCount, isAdmin } = useStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [headerSearch, setHeaderSearch] = useState('');
 
@@ -30,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
       key: 'inStock',
     },
     {
-      label: fittingIds.length > 0 ? `Примерки (${fittingIds.length})` : 'Примерки',
+      label: validFittingCount > 0 ? `Примерки (${validFittingCount})` : 'Примерки',
       route: { page: 'fittings', tab: 'fittings' },
       key: 'fittings',
     },
@@ -50,6 +50,7 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
   const handleHeaderSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!headerSearch.trim()) return;
+    setMobileOpen(false);
     onNavigate({ page: 'catalog', search: headerSearch.trim() });
   };
 

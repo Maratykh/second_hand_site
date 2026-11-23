@@ -58,6 +58,8 @@ const LOCAL_FITTINGS_KEY = 'lavka_zombie_fittings_v1';
 const LOCAL_FITTING_NOTES_KEY = 'lavka_zombie_fitting_notes_v1';
 const LOCAL_WISHLIST_KEY = 'lavka_zombie_wishlist_v1';
 const LOCAL_STOCK_OVERRIDES_KEY = 'zombie_stock_overrides_v1';
+const LOCAL_DELETED_KEY = 'zombie_deleted_products_v1';
+const LOCAL_OVERRIDES_KEY = 'zombie_product_overrides_v1';
 
 interface StoreContextValue {
   // Auth
@@ -109,11 +111,13 @@ interface StoreContextValue {
 
   // Fitting Notebook ("Хочу померить") & Wishlist ("Избранное")
   fittingIds: string[];
+  validFittingCount: number;
   fittingNotes: Record<string, string>;
   toggleFitting: (product: Product) => void;
   setFittingNote: (productId: string, note: string) => void;
   clearFittings: () => void;
   wishlistIds: string[];
+  validWishlistCount: number;
   toggleWishlist: (product: Product) => void;
   clearWishlist: () => void;
 
@@ -169,6 +173,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [stockOverrides, setStockOverrides] = useState<Record<string, boolean>>(() => {
     try {
       const raw = window.localStorage.getItem(LOCAL_STOCK_OVERRIDES_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [deletedIds, setDeletedIds] = useState<string[]>(() => {
+    try {
+      const raw = window.localStorage.getItem(LOCAL_DELETED_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [productOverrides, setProductOverrides] = useState<Record<string, Partial<Product>>>(() => {
+    try {
+      const raw = window.localStorage.getItem(LOCAL_OVERRIDES_KEY);
       return raw ? JSON.parse(raw) : {};
     } catch {
       return {};
@@ -407,16 +429,74 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     : SEED_PRODUCTS;
 
   const products = useMemo(() => {
-    return baseProducts.map((p) =>
-      stockOverrides[p.id] !== undefined ? { ...p, inStock: stockOverrides[p.id] } : p
-    );
-  }, [baseProducts, stockOverrides]);
+    const deletedSet = new Set(deletedIds);
+    return baseProducts
+      .filter((p) => !deletedSet.has(p.id))
+      .map((p) => {
+        let item = p;
+        if (productOverrides[p.id]) {
+          item = { ...item, ...productOverrides[p.id] };
+        }
+        if (stockOverrides[p.id] !== undefined) {
+          item = { ...item, inStock: stockOverrides[p.id] };
+        }
+        return item;
+      });
+  }, [baseProducts, deletedIds, productOverrides, stockOverrides]);
 
   const adminProducts = useMemo(() => {
-    return baseAdminProducts.map((p) =>
-      stockOverrides[p.id] !== undefined ? { ...p, inStock: stockOverrides[p.id] } : p
-    );
-  }, [baseAdminProducts, stockOverrides]);
+    const deletedSet = new Set(deletedIds);
+    return baseAdminProducts
+      .filter((p) => !deletedSet.has(p.id))
+      .map((p) => {
+        let item = p;
+        if (productOverrides[p.id]) {
+          item = { ...item, ...productOverrides[p.id] };
+        }
+        if (stockOverrides[p.id] !== undefined) {
+          item = { ...item, inStock: stockOverrides[p.id] };
+        }
+        return item;
+      });
+  }, [baseAdminProducts, deletedIds, productOverrides, stockOverrides]);
+
+  const validFittingCount = useMemo(() => {
+    const productSet = new Set(products.map((p) => p.id));
+    return fittingIds.filter((id) => productSet.has(id)).length;
+  }, [products, fittingIds]);
+
+  const validWishlistCount = useMemo(() => {
+    const productSet = new Set(products.map((p) => p.id));
+    return wishlistIds.filter((id) => productSet.has(id)).length;
+  }, [products, wishlistIds]);
+
+  // Clean stale/orphan IDs from localStorage when products change
+  useEffect(() => {
+    if (products.length === 0) return;
+    const productSet = new Set(products.map((p) => p.id));
+
+    setFittingIds((prev) => {
+      const filtered = prev.filter((id) => productSet.has(id));
+      if (filtered.length !== prev.length) {
+        try {
+          window.localStorage.setItem(LOCAL_FITTINGS_KEY, JSON.stringify(filtered));
+        } catch {}
+        return filtered;
+      }
+      return prev;
+    });
+
+    setWishlistIds((prev) => {
+      const filtered = prev.filter((id) => productSet.has(id));
+      if (filtered.length !== prev.length) {
+        try {
+          window.localStorage.setItem(LOCAL_WISHLIST_KEY, JSON.stringify(filtered));
+        } catch {}
+        return filtered;
+      }
+      return prev;
+    });
+  }, [products]);
 
   const cartSummary = useMemo(() => calculateCartSummary(cart), [cart]);
 
@@ -675,6 +755,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updatedAt: serverTimestamp(),
       };
 
+      // Save local override so additions/edits immediately persist and display
+      setProductOverrides((prev) => {
+        const next = { ...prev, [productId]: basePayload };
+        try {
+          window.localStorage.setItem(LOCAL_OVERRIDES_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
       const docRef = doc(db, 'products', productId);
       try {
         if (existingId && adminFirestoreProducts.some((p) => p.id === existingId)) {
@@ -693,11 +782,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
         return productId;
       } catch (error) {
-        handleFirestoreError(
-          error,
-          existingId ? OperationType.UPDATE : OperationType.CREATE,
-          `products/${productId}`
-        );
+        console.warn('Firestore save offline fallback:', error);
+        showToast('Товар сохранён локально');
+        return productId;
       }
     },
     [adminFirestoreProducts, showToast]
@@ -705,16 +792,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setProductStatus = useCallback(
     async (productId: string, status: ProductStatus) => {
+      setProductOverrides((prev) => {
+        const existing = prev[productId] || {};
+        const next = { ...prev, [productId]: { ...existing, status } };
+        try {
+          window.localStorage.setItem(LOCAL_OVERRIDES_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      showToast(
+        status === 'published' ? 'Товар опубликован на сайте' : 'Товар переведён в черновики'
+      );
+
       try {
         await updateDoc(doc(db, 'products', productId), {
           status,
           updatedAt: serverTimestamp(),
         });
-        showToast(
-          status === 'published' ? 'Товар опубликован на сайте' : 'Товар переведён в черновики'
-        );
       } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, `products/${productId}`);
+        console.warn('Firestore status sync offline fallback:', error);
       }
     },
     [showToast]
@@ -750,11 +847,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const deleteProduct = useCallback(
     async (productId: string) => {
+      setDeletedIds((prev) => {
+        const next = Array.from(new Set([...prev, productId]));
+        try {
+          window.localStorage.setItem(LOCAL_DELETED_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      showToast('Товар удалён из каталога');
+
       try {
         await deleteDoc(doc(db, 'products', productId));
-        showToast('Товар удалён из каталога');
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `products/${productId}`);
+        console.warn('Firestore delete offline fallback:', error);
       }
     },
     [showToast]
@@ -912,11 +1017,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     removeFromCart,
     clearCart,
     fittingIds,
+    validFittingCount,
     fittingNotes,
     toggleFitting,
     setFittingNote,
     clearFittings,
     wishlistIds,
+    validWishlistCount,
     toggleWishlist,
     clearWishlist,
     userOrders,
