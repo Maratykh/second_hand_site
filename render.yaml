@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: lavka-zombie
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VK_OWNER_ID
+        value: "-139575762"
