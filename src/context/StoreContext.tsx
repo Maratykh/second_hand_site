@@ -36,6 +36,7 @@ import { ADMIN_EMAIL, SCHEMA_LIMITS } from '../types/store';
 import {
   addToCartList,
   buildDraftProductFromVkPhoto,
+  buildDraftProductFromVkItem,
   calculateCartSummary,
   generateOrderNumber,
   removeFromCartList,
@@ -71,6 +72,16 @@ interface StoreContextValue {
   deleteProduct: (productId: string) => Promise<void>;
   uploadProductImage: (file: File) => Promise<string>;
   importVkDrafts: (imageUrls: string[]) => Promise<number>;
+  importVkItems: (
+    items: Array<{
+      title?: string;
+      price?: number;
+      size?: ProductSize;
+      category?: ProductCategory;
+      description?: string;
+      image: string;
+    }>
+  ) => Promise<number>;
 
   // Cart
   cart: CartItem[];
@@ -701,6 +712,57 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [adminFirestoreProducts, showToast]
   );
 
+  const importVkItems = useCallback(
+    async (
+      items: Array<{
+        title?: string;
+        price?: number;
+        size?: ProductSize;
+        category?: ProductCategory;
+        description?: string;
+        image: string;
+      }>
+    ): Promise<number> => {
+      const existingBaseUrls = new Set(
+        adminFirestoreProducts
+          .map((p) => (p.images[0] || '').split('?')[0])
+          .filter(Boolean)
+      );
+
+      const drafts = items
+        .filter((item) => item.image && !existingBaseUrls.has(item.image.split('?')[0]))
+        .map((item) => buildDraftProductFromVkItem(item))
+        .filter((d): d is NonNullable<typeof d> => Boolean(d));
+
+      if (drafts.length === 0) {
+        showToast('Все найденные товары из этого альбома уже добавлены');
+        return 0;
+      }
+
+      const CHUNK_SIZE = 25;
+      try {
+        for (let i = 0; i < drafts.length; i += CHUNK_SIZE) {
+          const chunk = drafts.slice(i, i + CHUNK_SIZE);
+          const batch = writeBatch(db);
+          for (const draft of chunk) {
+            const docId = createSafeDocId('draft');
+            batch.set(doc(db, 'products', docId), {
+              ...draft,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            });
+          }
+          await batch.commit();
+        }
+        showToast(`Успешно добавлено ${drafts.length} товаров из альбома ВК!`);
+        return drafts.length;
+      } catch (error) {
+        handleFirestoreError(error, OperationType.CREATE, 'products');
+      }
+    },
+    [adminFirestoreProducts, showToast]
+  );
+
   const updateOrderStatus = useCallback(
     async (orderId: string, status: OrderStatus) => {
       try {
@@ -733,6 +795,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     deleteProduct,
     uploadProductImage,
     importVkDrafts,
+    importVkItems,
     cart,
     cartSummary,
     addToCart,

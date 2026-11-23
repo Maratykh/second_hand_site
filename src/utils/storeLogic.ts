@@ -254,6 +254,33 @@ export function buildDraftProductFromVkPhoto(
   };
 }
 
+export function buildDraftProductFromVkItem(item: {
+  title?: string;
+  description?: string;
+  price?: number;
+  size?: ProductSize;
+  category?: ProductCategory;
+  image: string;
+}): Omit<Product, 'id' | 'createdAt' | 'updatedAt'> | null {
+  const safeImage = sanitizeImageUrl(item.image);
+  if (!safeImage) return null;
+
+  return {
+    title: (item.title || '').trim().slice(0, 140),
+    description: (item.description || '').trim().slice(0, 2000),
+    price: Math.max(0, Math.min(100000, Math.round(Number(item.price) || 0))),
+    currency: 'BYN',
+    category: item.category || 'hoodies',
+    sizes: item.size ? [item.size] : ['ONE SIZE'],
+    images: [safeImage],
+    era: 'Винтаж',
+    condition: 'Отличное',
+    status: 'draft',
+    inStock: true,
+    featured: false,
+  };
+}
+
 export function buildProductDownloadFilename(title: string, index = 0): string {
   const clean = title
     .toLowerCase()
