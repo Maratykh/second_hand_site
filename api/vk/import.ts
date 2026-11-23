@@ -82,8 +82,21 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const body = (req.body || {}) as { albumId?: string; token?: string };
-    const rawInput = typeof body.albumId === 'string' ? body.albumId.trim() : '';
+    let body = req.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        body = {};
+      }
+    }
+
+    const rawInput =
+      typeof body?.albumId === 'string'
+        ? body.albumId.trim()
+        : typeof body?.albumUrl === 'string'
+        ? body.albumUrl.trim()
+        : '';
 
     if (!rawInput) {
       return res.status(400).json({
@@ -98,9 +111,9 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const vkToken = body.token?.trim() || process.env.VK_SERVICE_TOKEN || '';
+    const vkToken = body?.token?.trim() || process.env.VK_SERVICE_TOKEN || '';
 
-    // If VK token is provided, use official VK API with extended=1 for full titles, prices and sizes
+    // If VK token is provided, use official VK API with extended=1
     if (vkToken) {
       const apiUrl = `https://api.vk.com/method/photos.get?owner_id=${encodeURIComponent(
         parsed.ownerId
@@ -152,31 +165,42 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Fallback: public fetch
-    const albumUrl = `https://vk.com/album${parsed.ownerId}_${parsed.albumId}`;
-    const pageRes = await fetch(albumUrl, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      },
-    });
+    // Public fetch fallback
+    const targetUrls = [
+      `https://vk.com/album${parsed.ownerId}_${parsed.albumId}`,
+      `https://vk.ru/album${parsed.ownerId}_${parsed.albumId}`,
+    ];
 
-    const html = await pageRes.text();
-    const urlMatches =
-      html.match(/https?:\/\/(?:sun\d+-\d+|pp|cs\d+)\.(?:userapi\.com|vkuserphoto\.ru)\/[^\s"'<>\\)]+/gi) || [];
+    let foundImages: string[] = [];
+    for (const url of targetUrls) {
+      try {
+        const pageRes = await fetch(url, {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          },
+        });
 
-    const seen = new Set<string>();
-    const images: string[] = [];
-    for (const url of urlMatches) {
-      const clean = url.replace(/\\\//g, '/').replace(/&amp;/g, '&');
-      const baseKey = clean.split('?')[0];
-      if (!seen.has(baseKey)) {
-        seen.add(baseKey);
-        images.push(clean);
+        const html = await pageRes.text();
+        const urlMatches =
+          html.match(/https?:\/\/(?:sun\d+-\d+|pp|cs\d+)\.(?:userapi\.com|vkuserphoto\.ru)\/[^\s"'<>\\)]+/gi) || [];
+
+        const seen = new Set<string>();
+        for (const u of urlMatches) {
+          const clean = u.replace(/\\\//g, '/').replace(/&amp;/g, '&');
+          const baseKey = clean.split('?')[0];
+          if (!seen.has(baseKey)) {
+            seen.add(baseKey);
+            foundImages.push(clean);
+          }
+        }
+        if (foundImages.length > 0) break;
+      } catch {
+        // continue
       }
     }
 
-    const items = images.map((img) => ({
+    const items = foundImages.map((img) => ({
       title: 'Винтажная позиция',
       price: 0,
       size: 'M',
@@ -187,11 +211,11 @@ export default async function handler(req: any, res: any) {
 
     return res.status(200).json({
       items,
-      images,
+      images: foundImages,
       total: items.length,
       needTokenNotice:
-        images.length === 0
-          ? 'ВКонтакте временно блокирует прямые серверные запросы к этому альбому. Воспользуйтесь кнопкой «Мгновенный импорт из соседней вкладки ВК» ниже.'
+        foundImages.length === 0
+          ? 'ВКонтакте заблокировал серверный запрос капчей («У вас большие запросы»). Используйте «⭐ Рекомендуемый способ: Импорт из открытой вкладки ВК» — он перенесёт все 260 фото за 5 секунд без капч.'
           : undefined,
     });
   } catch (err: any) {

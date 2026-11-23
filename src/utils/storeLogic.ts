@@ -261,6 +261,7 @@ export function buildDraftProductFromVkItem(item: {
   size?: ProductSize;
   category?: ProductCategory;
   image: string;
+  measurements?: ProductMeasurements;
 }): Omit<Product, 'id' | 'createdAt' | 'updatedAt'> | null {
   const safeImage = sanitizeImageUrl(item.image);
   if (!safeImage) return null;
@@ -275,6 +276,7 @@ export function buildDraftProductFromVkItem(item: {
     images: [safeImage],
     era: 'Винтаж',
     condition: 'Отличное',
+    measurements: item.measurements,
     status: 'draft',
     inStock: true,
     featured: false,

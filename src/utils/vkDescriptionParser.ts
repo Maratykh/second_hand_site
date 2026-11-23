@@ -1,4 +1,4 @@
-import type { ProductCategory, ProductSize } from '../types/store';
+import type { ProductCategory, ProductMeasurements, ProductSize } from '../types/store';
 
 export interface ParsedVkItem {
   title: string;
@@ -7,6 +7,7 @@ export interface ParsedVkItem {
   category: ProductCategory;
   description: string;
   image: string;
+  measurements?: ProductMeasurements;
 }
 
 export function parseVkItemDescription(
@@ -17,53 +18,93 @@ export function parseVkItemDescription(
   price: number;
   size: ProductSize;
   category: ProductCategory;
+  measurements?: ProductMeasurements;
 } {
-  const lines = (text || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  // Normalize HTML line breaks and entities
+  const clean = (text || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/&#\d+;/g, '')
+    .trim();
+
+  const lines = clean.split('\n').map((l) => l.trim()).filter(Boolean);
   let title = '';
   let price = 0;
   let size: ProductSize = 'M';
   let category: ProductCategory = defaultCategory;
+  const measurements: ProductMeasurements = {};
 
   for (const line of lines) {
+    // Title is usually the first line with real text that is not price/size/links/promo
     if (
       !title &&
       !line.startsWith('👉') &&
       !line.startsWith('http') &&
-      !/^(цена|размер|price|size)/i.test(line)
+      !line.startsWith('📌') &&
+      !/^(цена|размер|price|size|замеры)/i.test(line)
     ) {
       title = line.replace(/^[•*\-\s]+/, '').slice(0, 100);
     }
 
+    // Price
     const priceMatch = line.match(/(?:цена|price)[:\s]*(\d+)/i);
     if (priceMatch) {
       price = parseInt(priceMatch[1], 10);
     }
 
-    const sizeMatch = line.match(/(?:размер|size)[:\s]*([a-zA-Z0-9\s/-]+)/i);
+    // Size
+    const sizeMatch = line.match(/(?:размер|size)[:\s]*([a-zA-Z0-9\s/_-]+)/i);
     if (sizeMatch) {
       const raw = sizeMatch[1].trim().toUpperCase();
-      if (['XS', 'S', 'M', 'L', 'XL', 'XXL', 'ONE SIZE'].includes(raw)) {
-        size = raw as ProductSize;
+      if (raw === 'OS' || raw === 'ONE-SIZE' || raw.includes('ONE SIZE')) {
+        size = 'ONE SIZE';
+      } else if (raw.includes('XXL')) {
+        size = 'XXL';
+      } else if (raw.includes('XL')) {
+        size = 'XL';
+      } else if (raw.includes('XS')) {
+        size = 'XS';
+      } else if (raw.includes('L')) {
+        size = 'L';
+      } else if (raw.includes('M')) {
+        size = 'M';
+      } else if (raw.includes('S')) {
+        size = 'S';
       }
     }
+
+    // Measurements
+    const chestMatch = line.match(/(?:полуобхват груди|грудь|ширина)[:\s\-]*(\d+)\s*см/i);
+    if (chestMatch) measurements.width = `${chestMatch[1]} см`;
+
+    const lengthMatch = line.match(/(?:длина)[:\s\-]*(\d+)\s*см/i);
+    if (lengthMatch) measurements.length = `${lengthMatch[1]} см`;
+
+    const sleeveMatch = line.match(/(?:рукав)[:\s\-]*(\d+)\s*см/i);
+    if (sleeveMatch) measurements.sleeve = `${sleeveMatch[1]} см`;
   }
 
   if (!title) {
     title = 'Винтажная позиция';
   }
 
-  const lowerText = (title + ' ' + (text || '')).toLowerCase();
-  if (/свитшот|худи|байк|толстовк|кардиган|лонгслив/i.test(lowerText)) {
+  const lowerText = (title + ' ' + clean).toLowerCase();
+  if (/шопер|шоппер|рюкзак|сумк|очки|кольцо|кепи|кепк|шапк|ремень|аксессуар|браслет|значок/i.test(lowerText)) {
+    category = 'accessories';
+  } else if (/свитшот|худи|байк|толстовк|кардиган|лонгслив|кофт|флис|олимпийк|джемпер|пуловер|водолазк/i.test(lowerText)) {
     category = 'hoodies';
-  } else if (/куртк|косух|ветровк|бомбер|пуховик/i.test(lowerText)) {
+  } else if (/куртк|косух|ветровк|бомбер|пуховик|пальто|плащ|жилет|анорак/i.test(lowerText)) {
     category = 'jackets';
   } else if (/футболк|майк|поло/i.test(lowerText)) {
     category = 'tshirts';
-  } else if (/джинс|брюк|штаны|шорт/i.test(lowerText)) {
+  } else if (/джинс|брюк|штаны|шорт|карго|спортивки/i.test(lowerText)) {
     category = 'pants';
-  } else if (/сумк|кепк|шапк|ремень|аксессуар/i.test(lowerText)) {
-    category = 'accessories';
   }
 
-  return { title, price, size, category };
+  return {
+    title,
+    price,
+    size,
+    category,
+    measurements: Object.keys(measurements).length > 0 ? measurements : undefined,
+  };
 }

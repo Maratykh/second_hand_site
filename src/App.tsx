@@ -5,9 +5,7 @@ import { Header, type AppRoute } from './components/Header';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { AboutPage } from './pages/AboutPage';
 import { AdminPage } from './pages/AdminPage';
-import { CartPage } from './pages/CartPage';
 import { CatalogPage } from './pages/CatalogPage';
-import { CheckoutPage } from './pages/CheckoutPage';
 import { FittingsPage } from './pages/FittingsPage';
 import { HomePage } from './pages/HomePage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
@@ -22,7 +20,13 @@ function parseHashToRoute(): AppRoute {
 
   if (first === 'catalog') {
     const params = new URLSearchParams(queryPart || '');
-    return { page: 'catalog', category: params.get('category') || undefined };
+    const inStockParam = params.get('inStock');
+    return {
+      page: 'catalog',
+      category: params.get('category') || undefined,
+      search: params.get('search') || undefined,
+      inStock: inStockParam !== null ? inStockParam === 'true' : undefined,
+    };
   }
   if (first === 'product' && second) {
     return { page: 'product', productId: decodeURIComponent(second) };
@@ -33,8 +37,6 @@ function parseHashToRoute(): AppRoute {
     return { page: 'fittings', tab };
   }
   if (first === 'favorites') return { page: 'fittings', tab: 'favorites' };
-  if (first === 'cart') return { page: 'cart' };
-  if (first === 'checkout') return { page: 'checkout' };
   if (first === 'about') return { page: 'about' };
   if (first === 'admin') return { page: 'admin' };
   return { page: 'home' };
@@ -44,18 +46,18 @@ function routeToHash(route: AppRoute): string {
   switch (route.page) {
     case 'home':
       return '#/';
-    case 'catalog':
-      return route.category
-        ? `#/catalog?category=${encodeURIComponent(route.category)}`
-        : '#/catalog';
+    case 'catalog': {
+      const params = new URLSearchParams();
+      if (route.category) params.set('category', route.category);
+      if (route.search) params.set('search', route.search);
+      if (route.inStock !== undefined) params.set('inStock', String(route.inStock));
+      const qs = params.toString();
+      return qs ? `#/catalog?${qs}` : '#/catalog';
+    }
     case 'product':
       return `#/product/${encodeURIComponent(route.productId)}`;
     case 'fittings':
       return route.tab === 'favorites' ? '#/fittings?tab=favorites' : '#/fittings';
-    case 'cart':
-      return '#/cart';
-    case 'checkout':
-      return '#/checkout';
     case 'about':
       return '#/about';
     case 'admin':
@@ -97,8 +99,10 @@ const AppShell: React.FC = () => {
         {route.page === 'home' && <HomePage onNavigate={navigate} />}
         {route.page === 'catalog' && (
           <CatalogPage
-            key={route.category || 'all'}
+            key={`${route.category || 'all'}-${route.search || ''}-${route.inStock}`}
             initialCategory={route.category}
+            initialSearch={route.search}
+            initialInStock={route.inStock}
             onNavigate={navigate}
           />
         )}
@@ -112,8 +116,6 @@ const AppShell: React.FC = () => {
             onNavigate={navigate}
           />
         )}
-        {route.page === 'cart' && <CartPage onNavigate={navigate} />}
-        {route.page === 'checkout' && <CheckoutPage onNavigate={navigate} />}
         {route.page === 'about' && <AboutPage />}
         {route.page === 'admin' && <AdminPage />}
       </main>

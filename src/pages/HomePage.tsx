@@ -22,8 +22,8 @@ const HOW_TO_ORDER_STEPS = [
   },
   {
     number: '02.',
-    title: 'Написать в Telegram',
-    description: `Оформите заказ через корзину или напишите напрямую ${BRAND_INFO.supportHandle} — забронируем вещь и уточним детали.`,
+    title: 'Заказать у Никиты 🛹',
+    description: `Нажмите «Заказать у Никиты» на странице нужного товара — откроется диалог в Telegram с ${BRAND_INFO.supportHandle} с готовым сообщением, ценой и ссылкой.`,
     icon: MessageCircle,
   },
   {

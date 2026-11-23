@@ -69,6 +69,7 @@ interface StoreContextValue {
   seedInitialProductsToDb: () => Promise<number>;
   saveProduct: (data: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>, existingId?: string) => Promise<string>;
   setProductStatus: (productId: string, status: ProductStatus) => Promise<void>;
+  setProductInStock: (productId: string, inStock: boolean) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
   uploadProductImage: (file: File) => Promise<string>;
   importVkDrafts: (imageUrls: string[]) => Promise<number>;
@@ -80,6 +81,7 @@ interface StoreContextValue {
       category?: ProductCategory;
       description?: string;
       image: string;
+      measurements?: ProductMeasurements;
     }>
   ) => Promise<number>;
 
@@ -644,6 +646,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [showToast]
   );
 
+  const setProductInStock = useCallback(
+    async (productId: string, inStock: boolean) => {
+      try {
+        await updateDoc(doc(db, 'products', productId), {
+          inStock,
+          updatedAt: serverTimestamp(),
+        });
+        showToast(
+          inStock ? 'Товар отмечен: «В наличии»' : 'Товар отмечен: «ПРОДАНО»'
+        );
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, `products/${productId}`);
+      }
+    },
+    [showToast]
+  );
+
   const deleteProduct = useCallback(
     async (productId: string) => {
       try {
@@ -721,6 +740,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         category?: ProductCategory;
         description?: string;
         image: string;
+        measurements?: ProductMeasurements;
       }>
     ): Promise<number> => {
       const existingBaseUrls = new Set(
@@ -792,6 +812,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     seedInitialProductsToDb,
     saveProduct,
     setProductStatus,
+    setProductInStock,
     deleteProduct,
     uploadProductImage,
     importVkDrafts,
