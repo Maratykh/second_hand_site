@@ -9,6 +9,7 @@ import { CatalogPage } from './pages/CatalogPage';
 import { FittingsPage } from './pages/FittingsPage';
 import { HomePage } from './pages/HomePage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
+import { ZombieBackgroundMascots } from './components/ZombieBackgroundMascots';
 
 function parseHashToRoute(): AppRoute {
   const raw = window.location.hash.replace(/^#\/?/, '');
@@ -92,10 +93,11 @@ const AppShell: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#09090B] text-[#F4F4F5]">
+    <div className="min-h-screen flex flex-col bg-[#09090B] text-[#F4F4F5] relative overflow-x-hidden">
+      <ZombieBackgroundMascots />
       <Header currentPage={route.page} onNavigate={navigate} />
 
-      <main className="flex-1">
+      <main className="flex-1 relative z-10">
         {route.page === 'home' && <HomePage onNavigate={navigate} />}
         {route.page === 'catalog' && (
           <CatalogPage

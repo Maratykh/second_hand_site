@@ -166,6 +166,32 @@
   border-color: rgba(163, 230, 53, 0.35);
 }
 
+@keyframes zombie-float-slow {
+  0%, 100% {
+    transform: translateY(0px) rotate(var(--zombie-rot, 0deg));
+  }
+  50% {
+    transform: translateY(-8px) rotate(calc(var(--zombie-rot, 0deg) + 2deg));
+  }
+}
+
+@keyframes zombie-float-alt {
+  0%, 100% {
+    transform: translateY(0px) rotate(var(--zombie-rot, 0deg));
+  }
+  50% {
+    transform: translateY(-6px) rotate(calc(var(--zombie-rot, 0deg) - 2deg));
+  }
+}
+
+.animate-zombie-float {
+  animation: zombie-float-slow 6s ease-in-out infinite;
+}
+
+.animate-zombie-float-alt {
+  animation: zombie-float-alt 7.5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
