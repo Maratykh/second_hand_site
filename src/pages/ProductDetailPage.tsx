@@ -2,14 +2,19 @@ import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink,
   Heart,
+  Maximize2,
   MessageCircle,
   PackageCheck,
   Ruler,
   ShieldAlert,
   Truck,
+  X,
   XCircle,
+  ZoomIn,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import type { ProductSize } from '../types/store';
@@ -33,11 +38,31 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [selectedSize, setSelectedSize] = useState<ProductSize | null>(null);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
   useEffect(() => {
     setSelectedImageIdx(0);
     setSelectedSize(product?.sizes[0] || null);
   }, [productId, product]);
+
+  useEffect(() => {
+    if (!isGalleryOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsGalleryOpen(false);
+      if (e.key === 'ArrowRight' && product?.images) {
+        setSelectedImageIdx((prev) => (prev + 1) % product.images.length);
+      }
+      if (e.key === 'ArrowLeft' && product?.images) {
+        setSelectedImageIdx((prev) => (prev - 1 + product.images.length) % product.images.length);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isGalleryOpen, product?.images]);
 
   if (!product) {
     return (
@@ -93,11 +118,17 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
         {/* Sticky Gallery Left */}
         <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-24">
-          <div className="relative aspect-[3/4] w-full bg-[#141417] border border-zinc-800/80 overflow-hidden">
+          <div
+            onClick={() => setIsGalleryOpen(true)}
+            title="Нажмите, чтобы открыть фото в HD на весь экран"
+            className="relative aspect-[3/4] w-full bg-[#141417] border border-zinc-800/80 overflow-hidden cursor-zoom-in group"
+          >
             <SafeImage
               src={product.images[selectedImageIdx] || product.images[0]}
               alt={product.title}
-              className={`w-full h-full object-cover ${!product.inStock ? 'opacity-60 grayscale' : ''}`}
+              className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02] ${
+                !product.inStock ? 'opacity-60 grayscale' : ''
+              }`}
               fallbackLabel={product.title}
             />
 
@@ -114,6 +145,12 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   Продано
                 </span>
               )}
+            </div>
+
+            {/* HD Zoom Badge */}
+            <div className="absolute bottom-4 right-4 z-10 px-2.5 py-1.5 bg-[#09090B]/85 hover:bg-[#09090B] border border-zinc-700 text-xs text-white font-medium flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
+              <ZoomIn className="w-3.5 h-3.5 text-[#A3E635]" />
+              <span>HD зум</span>
             </div>
           </div>
 
@@ -328,6 +365,110 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Fullscreen HD Gallery Modal */}
+      {isGalleryOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 select-none"
+          onClick={() => setIsGalleryOpen(false)}
+        >
+          {/* Top Bar */}
+          <div
+            className="flex items-center justify-between text-white border-b border-zinc-800 pb-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-xs font-bold text-[#A3E635] px-2.5 py-1 bg-[#A3E635]/15 border border-[#A3E635]/30">
+                HD Оригинал
+              </span>
+              <p className="font-semibold text-sm truncate max-w-[200px] sm:max-w-md text-white">
+                {product.title}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4">
+              {product.images.length > 1 && (
+                <span className="font-mono text-xs text-zinc-400">
+                  {selectedImageIdx + 1} / {product.images.length}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsGalleryOpen(false)}
+                className="p-1.5 text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-colors cursor-pointer"
+                aria-label="Закрыть галерею"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Central Image with Navigation */}
+          <div
+            className="flex-1 flex items-center justify-center relative my-4 min-h-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {product.images.length > 1 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedImageIdx(
+                    (prev) => (prev - 1 + product.images.length) % product.images.length
+                  )
+                }
+                className="absolute left-2 sm:left-4 z-20 p-2 sm:p-3 bg-black/75 hover:bg-[#A3E635] hover:text-[#09090B] text-white border border-zinc-700 transition-colors cursor-pointer"
+                aria-label="Предыдущее фото"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            <img
+              src={product.images[selectedImageIdx] || product.images[0]}
+              alt={product.title}
+              className="max-h-[75vh] max-w-[92vw] object-contain shadow-2xl transition-all duration-200"
+            />
+
+            {product.images.length > 1 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedImageIdx((prev) => (prev + 1) % product.images.length)
+                }
+                className="absolute right-2 sm:right-4 z-20 p-2 sm:p-3 bg-black/75 hover:bg-[#A3E635] hover:text-[#09090B] text-white border border-zinc-700 transition-colors cursor-pointer"
+                aria-label="Следующее фото"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            )}
+          </div>
+
+          {/* Bottom Thumbnails */}
+          {product.images.length > 1 && (
+            <div
+              className="flex items-center justify-center gap-2 overflow-x-auto py-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {product.images.map((img, idx) => (
+                <button
+                  key={`${img}-${idx}`}
+                  type="button"
+                  onClick={() => setSelectedImageIdx(idx)}
+                  className={`w-12 h-16 bg-[#141417] border overflow-hidden cursor-pointer shrink-0 transition-colors ${
+                    idx === selectedImageIdx
+                      ? 'border-[#A3E635] ring-1 ring-[#A3E635]'
+                      : 'border-zinc-800 opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <img src={img} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

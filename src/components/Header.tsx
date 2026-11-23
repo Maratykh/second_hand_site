@@ -119,10 +119,11 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
             href={BRAND_INFO.supportUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="neon-btn inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 min-h-[40px] bg-[#A3E635] text-[#09090B] text-xs sm:text-sm font-bold hover:bg-lime-300 transition-colors whitespace-nowrap cursor-pointer shadow-sm"
+            className="neon-btn inline-flex items-center gap-2 px-3 sm:px-4 py-2 min-h-[40px] bg-[#A3E635] text-[#09090B] text-xs sm:text-sm font-bold hover:bg-lime-300 transition-colors whitespace-nowrap cursor-pointer shadow-sm"
           >
             <MessageCircle className="w-4 h-4 shrink-0 fill-current" aria-hidden="true" />
-            <span>Заказать {BRAND_INFO.supportHandle} 🛹</span>
+            <span className="hidden sm:inline">Заказать {BRAND_INFO.supportHandle} 🛹</span>
+            <span className="sm:hidden">Заказать 🛹</span>
           </a>
 
           <button

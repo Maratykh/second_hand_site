@@ -530,21 +530,21 @@ export const AdminPage: React.FC = () => {
       {activeTab === 'inventory' && (
         <div className="space-y-6">
           {/* Quick Stats Grid */}
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
             <button
               type="button"
               onClick={() => setStockFilter('all')}
-              className={`p-4 bg-[#111114] border text-left transition-colors cursor-pointer ${
+              className={`p-3 sm:p-4 bg-[#111114] border text-left transition-colors cursor-pointer ${
                 stockFilter === 'all'
                   ? 'border-zinc-500 ring-1 ring-zinc-500'
                   : 'border-zinc-800/80 hover:border-zinc-700'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-400 uppercase font-medium">Всего позиций</span>
-                <Package className="w-4 h-4 text-zinc-400" />
+                <span className="text-[11px] sm:text-xs text-zinc-400 uppercase font-medium">Всего</span>
+                <Package className="w-4 h-4 text-zinc-400 hidden xs:block" />
               </div>
-              <p className="font-mono tabular-nums text-2xl sm:text-3xl font-bold text-white mt-2">
+              <p className="font-mono tabular-nums text-xl sm:text-3xl font-bold text-white mt-1 sm:mt-2">
                 {adminProducts.length}
               </p>
             </button>
@@ -552,17 +552,17 @@ export const AdminPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setStockFilter('in_stock')}
-              className={`p-4 bg-[#111114] border text-left transition-colors cursor-pointer ${
+              className={`p-3 sm:p-4 bg-[#111114] border text-left transition-colors cursor-pointer ${
                 stockFilter === 'in_stock'
                   ? 'border-[#A3E635] ring-1 ring-[#A3E635]'
                   : 'border-zinc-800/80 hover:border-zinc-700'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-400 uppercase font-medium">В наличии</span>
+                <span className="text-[11px] sm:text-xs text-zinc-400 uppercase font-medium">В наличии</span>
                 <span className="w-2.5 h-2.5 rounded-full bg-[#A3E635]"></span>
               </div>
-              <p className="font-mono tabular-nums text-2xl sm:text-3xl font-bold text-[#A3E635] mt-2">
+              <p className="font-mono tabular-nums text-xl sm:text-3xl font-bold text-[#A3E635] mt-1 sm:mt-2">
                 {inStockItems.length}
               </p>
             </button>
@@ -570,17 +570,17 @@ export const AdminPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setStockFilter('sold')}
-              className={`p-4 bg-[#111114] border text-left transition-colors cursor-pointer ${
+              className={`p-3 sm:p-4 bg-[#111114] border text-left transition-colors cursor-pointer ${
                 stockFilter === 'sold'
                   ? 'border-red-500 ring-1 ring-red-500'
                   : 'border-zinc-800/80 hover:border-zinc-700'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-400 uppercase font-medium">Продано</span>
+                <span className="text-[11px] sm:text-xs text-zinc-400 uppercase font-medium">Продано</span>
                 <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
               </div>
-              <p className="font-mono tabular-nums text-2xl sm:text-3xl font-bold text-red-400 mt-2">
+              <p className="font-mono tabular-nums text-xl sm:text-3xl font-bold text-red-400 mt-1 sm:mt-2">
                 {soldItems.length}
               </p>
             </button>
@@ -615,7 +615,7 @@ export const AdminPage: React.FC = () => {
                   setEditingProduct(null);
                   setShowProductModal(true);
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#A3E635] text-[#09090B] text-xs font-bold uppercase tracking-wider hover:bg-lime-300 transition-colors cursor-pointer shrink-0 shadow-lg shadow-lime-950/40"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[42px] bg-[#A3E635] text-[#09090B] text-xs font-bold uppercase tracking-wider hover:bg-lime-300 transition-colors cursor-pointer shrink-0 shadow-lg shadow-lime-950/40"
               >
                 <Plus className="w-4 h-4" />
                 <span>Быстро добавить вещь</span>

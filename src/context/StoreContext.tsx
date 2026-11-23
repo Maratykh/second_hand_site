@@ -478,7 +478,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setProductsLoading(false);
       },
       (error) => {
-        console.error('Products snapshot error:', error);
+        console.warn('Products snapshot fallback to local/seed items:', error);
         setProductsLoading(false);
       }
     );

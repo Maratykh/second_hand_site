@@ -4,7 +4,7 @@ import { useStore } from '../../context/StoreContext';
 import type { Product, ProductCategory, ProductSize, ProductStatus } from '../../types/store';
 import { ALL_SIZES, PRODUCT_CATEGORIES, SCHEMA_LIMITS } from '../../types/store';
 import { downloadProductPhoto } from '../../utils/downloadImage';
-import { sanitizeImageUrl, sanitizeMeasurements } from '../../utils/storeLogic';
+import { sanitizeImageUrl, sanitizeMeasurements, validateProductFormData } from '../../utils/storeLogic';
 
 interface AdminProductFormModalProps {
   initialProduct?: Product | null;
@@ -130,28 +130,16 @@ export const AdminProductFormModal: React.FC<AdminProductFormModalProps> = ({
     const parsedPrice = price.trim() === '' ? 0 : Number(price);
     const parsedImages = parsedPreviewImages;
 
-    if (targetStatus === 'published' && title.trim().length < 2) {
-      setError('Для публикации укажите название товара (минимум 2 символа).');
-      return;
-    }
-    if (
-      !Number.isFinite(parsedPrice) ||
-      parsedPrice < 0 ||
-      parsedPrice > SCHEMA_LIMITS.productPriceMax
-    ) {
-      setError('Укажите корректную цену в BYN.');
-      return;
-    }
-    if (targetStatus === 'published' && parsedPrice <= 0) {
-      setError('Для публикации на сайте укажите цену больше 0 BYN.');
-      return;
-    }
-    if (sizes.length === 0) {
-      setError('Выберите хотя бы один размер.');
-      return;
-    }
-    if (parsedImages.length === 0) {
-      setError('Добавьте хотя бы одно изображение (загрузите файл или укажите URL).');
+    const validation = validateProductFormData({
+      title,
+      price: parsedPrice,
+      sizes,
+      images: parsedImages,
+      status: targetStatus,
+    });
+
+    if (!validation.valid) {
+      setError(validation.error || 'Проверьте введённые данные.');
       return;
     }
 
@@ -196,12 +184,12 @@ export const AdminProductFormModal: React.FC<AdminProductFormModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="product-modal-title"
     >
-      <div className="w-full max-w-2xl bg-[#111114] border border-zinc-700 p-5 sm:p-8 my-8 space-y-6">
+      <div className="w-full max-w-2xl bg-[#111114] border border-zinc-700 p-4 sm:p-8 my-auto space-y-6 max-h-[92vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
           <div className="space-y-0.5">
             <h2
@@ -225,6 +213,12 @@ export const AdminProductFormModal: React.FC<AdminProductFormModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {error && (
+          <div className="p-3 bg-red-950/60 border border-red-800 text-xs text-red-300 leading-relaxed" role="alert">
+            ⚠️ {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1.5">
@@ -483,11 +477,11 @@ export const AdminProductFormModal: React.FC<AdminProductFormModalProps> = ({
             </p>
           )}
 
-          <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-zinc-800">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-3 border-t border-zinc-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 border border-zinc-700 text-zinc-300 text-sm hover:text-white cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2.5 min-h-[42px] border border-zinc-700 text-zinc-300 text-sm hover:text-white cursor-pointer"
             >
               Отмена
             </button>
@@ -497,7 +491,7 @@ export const AdminProductFormModal: React.FC<AdminProductFormModalProps> = ({
                 type="button"
                 disabled={saving || uploading}
                 onClick={() => void submitWithStatus('draft')}
-                className="px-4 py-2.5 border border-zinc-600 text-zinc-200 text-sm hover:border-white cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2.5 min-h-[42px] border border-zinc-600 text-zinc-200 text-sm hover:border-white cursor-pointer"
               >
                 Сохранить как черновик
               </button>
@@ -509,7 +503,7 @@ export const AdminProductFormModal: React.FC<AdminProductFormModalProps> = ({
               onClick={() =>
                 void submitWithStatus(isDraft ? 'published' : status)
               }
-              className="px-6 py-2.5 bg-[#A3E635] text-[#09090B] text-sm font-bold hover:bg-lime-300 disabled:opacity-50 cursor-pointer"
+              className="w-full sm:w-auto px-6 py-2.5 min-h-[42px] bg-[#A3E635] text-[#09090B] text-sm font-bold hover:bg-lime-300 disabled:opacity-50 cursor-pointer text-center"
             >
               {saving
                 ? 'Сохраняем...'

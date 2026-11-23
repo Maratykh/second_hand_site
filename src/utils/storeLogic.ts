@@ -5,6 +5,7 @@ import type {
   ProductCategory,
   ProductMeasurements,
   ProductSize,
+  ProductStatus,
 } from '../types/store';
 import { SCHEMA_LIMITS } from '../types/store';
 
@@ -42,6 +43,39 @@ export function filterAndSortProducts(products: Product[], filters: CatalogFilte
 export function toggleIdInList(list: string[], id: string): string[] {
   if (!id) return list;
   return list.includes(id) ? list.filter((item) => item !== id) : [id, ...list];
+}
+
+export interface ProductFormData {
+  title: string;
+  price: string | number;
+  sizes: ProductSize[];
+  images: string[];
+  status: ProductStatus;
+}
+
+export function validateProductFormData(data: ProductFormData): { valid: boolean; error?: string } {
+  const trimmedTitle = (data.title || '').trim();
+  if (data.status === 'published' && trimmedTitle.length < 2) {
+    return { valid: false, error: 'Для публикации укажите название товара (минимум 2 символа).' };
+  }
+
+  const numPrice = typeof data.price === 'number' ? data.price : Number(data.price);
+  if (!Number.isFinite(numPrice) || numPrice < 0 || numPrice > SCHEMA_LIMITS.productPriceMax) {
+    return { valid: false, error: 'Укажите корректную цену в BYN.' };
+  }
+  if (data.status === 'published' && numPrice <= 0) {
+    return { valid: false, error: 'Для публикации на сайте укажите цену больше 0 BYN.' };
+  }
+
+  if (!data.sizes || data.sizes.length === 0) {
+    return { valid: false, error: 'Выберите хотя бы один размер.' };
+  }
+
+  if (!data.images || data.images.length === 0) {
+    return { valid: false, error: 'Добавьте хотя бы одно изображение (загрузите файл или укажите URL).' };
+  }
+
+  return { valid: true };
 }
 
 export function sanitizeMeasurements(

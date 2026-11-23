@@ -43,6 +43,7 @@ export const SafeImage: React.FC<SafeImageProps> = ({
       onError={() => setFailed(true)}
       className={className}
       loading="lazy"
+      decoding="async"
     />
   );
 };
