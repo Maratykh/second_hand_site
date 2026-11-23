@@ -1,0 +1,250 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A vintage clothing item in the Lavka Zombie store catalog (draft or published).",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 140,
+          "description": "Display title of the vintage garment (may be empty while in draft)."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 2000,
+          "description": "Detailed garment description and patina notes."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price in BYN (0 allowed while in draft)."
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["BYN"],
+          "description": "ISO currency code."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["jackets", "tshirts", "pants", "hoodies", "accessories"],
+          "description": "Catalog category key."
+        },
+        "sizes": {
+          "type": "array",
+          "description": "Available sizes (up to 10 values from standard size allowlist)."
+        },
+        "images": {
+          "type": "array",
+          "description": "Up to 8 product image URLs."
+        },
+        "era": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Garment era label such as 90-е or Y2K."
+        },
+        "condition": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Condition rating and vintage wear description."
+        },
+        "measurements": {
+          "type": "object",
+          "description": "Optional garment measurements (length, width, sleeve)."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "published"],
+          "description": "Publication workflow status: draft (admin-only) or published (public storefront)."
+        },
+        "inStock": {
+          "type": "boolean",
+          "description": "Whether the item is currently available for purchase."
+        },
+        "featured": {
+          "type": "boolean",
+          "description": "Whether to highlight in the Home New Arrivals showcase."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update."
+        }
+      },
+      "required": [
+        "title",
+        "description",
+        "price",
+        "currency",
+        "category",
+        "sizes",
+        "images",
+        "era",
+        "condition",
+        "status",
+        "inStock",
+        "featured",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer purchase order with delivery details and PII isolation.",
+      "type": "object",
+      "properties": {
+        "orderNumber": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 24,
+          "pattern": "^LZ-[A-Z0-9\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "customerPhone": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 32
+        },
+        "customerEmail": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120
+        },
+        "deliveryAddress": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 300
+        },
+        "deliveryMethod": {
+          "type": "string",
+          "enum": ["post", "europost", "cdek"]
+        },
+        "comment": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "items": {
+          "type": "array"
+        },
+        "totalAmount": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["BYN"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["new", "confirmed", "shipped", "completed", "cancelled"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "orderNumber",
+        "userId",
+        "customerName",
+        "customerPhone",
+        "customerEmail",
+        "deliveryAddress",
+        "deliveryMethod",
+        "comment",
+        "items",
+        "totalAmount",
+        "currency",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private user account profile and persisted shopping cart.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "cart": {
+          "type": "array"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "displayName", "email", "cart", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Authoritative admin role record.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Catalog products: published items are publicly readable; drafts and all writes are admin-only."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Customer orders with strict PII isolation (owner or admin reads, admin status management)."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profiles and persisted carts accessible only by the owning user or admin."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Trusted admin allowlist managed exclusively by bootstrapped admins."
+    }
+  }
+}

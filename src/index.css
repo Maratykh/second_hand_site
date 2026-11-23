@@ -1,0 +1,176 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Oswald", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-obsidian: #050507;
+  --color-charcoal: #0C0C10;
+  --color-surface: #14141A;
+  --color-acid: #A3E635;
+  --color-neon-pink: #FF2E93;
+  --color-neon-cyan: #22D3EE;
+}
+
+@layer base {
+  html {
+    background-color: #050507;
+    color: #F4F4F5;
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: #050507;
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(163, 230, 53, 0.06), transparent 38%),
+      radial-gradient(circle at 85% 80%, rgba(255, 46, 147, 0.05), transparent 42%);
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Subtle vintage film grain overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 60;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+    text-wrap: balance;
+    letter-spacing: 0.02em;
+  }
+
+  ::selection {
+    background-color: #A3E635;
+    color: #050507;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #050507;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #27272A;
+    border-radius: 0;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #A3E635;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Vintage Neon Effects & Hover States */
+.vintage-card {
+  background: linear-gradient(180deg, #0E0E12 0%, #09090C 100%);
+  border: 1px solid rgba(63, 63, 70, 0.65);
+  transition:
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 240ms ease,
+    box-shadow 240ms ease;
+}
+
+.vintage-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(163, 230, 53, 0.7);
+  box-shadow:
+    0 12px 30px -12px rgba(0, 0, 0, 0.9),
+    0 0 22px rgba(163, 230, 53, 0.16);
+}
+
+.neon-btn {
+  transition:
+    transform 180ms ease,
+    box-shadow 220ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.neon-btn:hover:not(:disabled) {
+  box-shadow:
+    0 0 18px rgba(163, 230, 53, 0.48),
+    0 0 36px rgba(163, 230, 53, 0.16);
+  transform: translateY(-1px);
+}
+
+.neon-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.neon-outline-btn {
+  transition:
+    border-color 200ms ease,
+    color 200ms ease,
+    box-shadow 220ms ease,
+    transform 180ms ease;
+}
+
+.neon-outline-btn:hover {
+  border-color: #A3E635;
+  color: #A3E635;
+  box-shadow: 0 0 16px rgba(163, 230, 53, 0.22);
+  transform: translateY(-1px);
+}
+
+.vintage-wishlist-btn {
+  backdrop-filter: blur(8px);
+  transition:
+    transform 180ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    background-color 200ms ease;
+}
+
+.vintage-wishlist-btn:hover {
+  transform: scale(1.08);
+  border-color: #FF2E93;
+  box-shadow: 0 0 16px rgba(255, 46, 147, 0.45);
+}
+
+.vintage-wishlist-btn[data-active="true"] {
+  border-color: rgba(255, 46, 147, 0.85);
+  box-shadow: 0 0 14px rgba(255, 46, 147, 0.35);
+}
+
+.neon-text-glow {
+  text-shadow: 0 0 14px rgba(163, 230, 53, 0.35);
+}
+
+.neon-pink-glow {
+  text-shadow: 0 0 12px rgba(255, 46, 147, 0.45);
+}
+
+.vintage-panel {
+  background: linear-gradient(180deg, rgba(16, 16, 21, 0.96) 0%, rgba(9, 9, 12, 0.98) 100%);
+  border: 1px solid rgba(63, 63, 70, 0.7);
+  transition: border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.vintage-panel:hover {
+  border-color: rgba(163, 230, 53, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
