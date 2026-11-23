@@ -13,6 +13,7 @@ import { BRAND_INFO, CATEGORY_LABELS } from '../types/store';
 import { formatMeasurementValue, formatPriceBYN } from '../utils/storeLogic';
 import { SafeImage } from '../components/SafeImage';
 import type { AppRoute } from '../components/Header';
+import zombieSuitUrl from '../assets/images/zombie_suit.png';
 
 interface FittingsPageProps {
   initialTab?: 'fittings' | 'favorites';
@@ -145,7 +146,13 @@ export const FittingsPage: React.FC<FittingsPageProps> = ({
 
           {fittingProducts.length === 0 ? (
             <div className="bg-[#111114] border border-zinc-800/80 p-10 sm:p-14 text-center space-y-5">
-              <Ruler className="w-8 h-8 text-zinc-600 mx-auto" aria-hidden="true" />
+              <div className="relative inline-block mx-auto mb-1 animate-zombie-float">
+                <img
+                  src={zombieSuitUrl}
+                  alt="Лавка Зомби"
+                  className="w-16 sm:w-20 h-auto mx-auto object-contain filter drop-shadow-[0_0_14px_rgba(163,230,53,0.35)] drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
+                />
+              </div>
               <div className="space-y-2 max-w-md mx-auto">
                 <h2 className="font-display text-2xl font-bold text-white uppercase">
                   Список примерок пока пуст
@@ -319,7 +326,13 @@ export const FittingsPage: React.FC<FittingsPageProps> = ({
 
           {wishlistProducts.length === 0 ? (
             <div className="bg-[#111114] border border-zinc-800/80 p-10 sm:p-14 text-center space-y-5">
-              <Heart className="w-8 h-8 text-zinc-600 mx-auto" aria-hidden="true" />
+              <div className="relative inline-block mx-auto mb-1 animate-zombie-float-alt -scale-x-100">
+                <img
+                  src={zombieSuitUrl}
+                  alt="Лавка Зомби"
+                  className="w-16 sm:w-20 h-auto mx-auto object-contain filter drop-shadow-[0_0_14px_rgba(163,230,53,0.35)] drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
+                />
+              </div>
               <div className="space-y-2 max-w-md mx-auto">
                 <h2 className="font-display text-2xl font-bold text-white uppercase">
                   В избранном пока пусто
