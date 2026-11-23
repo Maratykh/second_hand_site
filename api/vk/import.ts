@@ -1,7 +1,72 @@
-import { parseVkAlbumInput } from '../../src/utils/vkAlbumParser';
-import { parseVkItemDescription } from '../../src/utils/vkDescriptionParser';
-
 const DEFAULT_VK_OWNER_ID = process.env.VK_OWNER_ID || '-139575762';
+
+function parseVkAlbumInput(input: string, defaultOwnerId = '-139575762') {
+  const trimmed = (input || '').trim();
+  if (!trimmed) return null;
+
+  const fullMatch =
+    trimmed.match(/album(-?\d+)_(\d+)/i) || trimmed.match(/^(-?\d+)_(\d+)$/);
+  if (fullMatch) {
+    return { ownerId: fullMatch[1], albumId: fullMatch[2] };
+  }
+
+  if (/^\d{1,20}$/.test(trimmed)) {
+    return { ownerId: defaultOwnerId, albumId: trimmed };
+  }
+
+  return null;
+}
+
+function parseVkItemDescription(text: string) {
+  const lines = (text || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  let title = '';
+  let price = 0;
+  let size = 'M';
+  let category = 'hoodies';
+
+  for (const line of lines) {
+    if (
+      !title &&
+      !line.startsWith('👉') &&
+      !line.startsWith('http') &&
+      !/^(цена|размер|price|size)/i.test(line)
+    ) {
+      title = line.replace(/^[•*\-\s]+/, '').slice(0, 100);
+    }
+
+    const priceMatch = line.match(/(?:цена|price)[:\s]*(\d+)/i);
+    if (priceMatch) {
+      price = parseInt(priceMatch[1], 10);
+    }
+
+    const sizeMatch = line.match(/(?:размер|size)[:\s]*([a-zA-Z0-9\s/-]+)/i);
+    if (sizeMatch) {
+      const raw = sizeMatch[1].trim().toUpperCase();
+      if (['XS', 'S', 'M', 'L', 'XL', 'XXL', 'ONE SIZE'].includes(raw)) {
+        size = raw;
+      }
+    }
+  }
+
+  if (!title) {
+    title = 'Винтажная позиция';
+  }
+
+  const lower = (title + ' ' + (text || '')).toLowerCase();
+  if (/свитшот|худи|байк|толстовк|кардиган|лонгслив/i.test(lower)) {
+    category = 'hoodies';
+  } else if (/куртк|косух|ветровк|бомбер|пуховик/i.test(lower)) {
+    category = 'jackets';
+  } else if (/футболк|майк|поло/i.test(lower)) {
+    category = 'tshirts';
+  } else if (/джинс|брюк|штаны|шорт/i.test(lower)) {
+    category = 'pants';
+  } else if (/сумк|кепк|шапк|ремень|аксессуар/i.test(lower)) {
+    category = 'accessories';
+  }
+
+  return { title, price, size, category };
+}
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -56,7 +121,6 @@ export default async function handler(req: any, res: any) {
         const text = item.text || '';
         const parsedDesc = parseVkItemDescription(text);
 
-        // Find largest image
         const sizes = item.sizes || [];
         const typeOrder = ['w', 'z', 'y', 'x', 'm', 's'];
         let bestUrl = '';
@@ -127,7 +191,7 @@ export default async function handler(req: any, res: any) {
       total: items.length,
       needTokenNotice:
         images.length === 0
-          ? 'VK ограничил анонимный доступ к альбому. Используйте кнопку «Импорт из открытой вкладки» ниже.'
+          ? 'ВКонтакте временно блокирует прямые серверные запросы к этому альбому. Воспользуйтесь кнопкой «Мгновенный импорт из соседней вкладки ВК» ниже.'
           : undefined,
     });
   } catch (err: any) {
