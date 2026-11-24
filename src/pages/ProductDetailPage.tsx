@@ -22,6 +22,10 @@ import { useStore } from '../context/StoreContext';
 import type { ProductSize } from '../types/store';
 import { BRAND_INFO, CATEGORY_LABELS } from '../types/store';
 import { formatMeasurementValue, formatPriceBYN } from '../utils/storeLogic';
+import {
+  isSeededLocalProductImage,
+  resolvePreloadedHdUrl,
+} from '../utils/hdImages';
 import { SafeImage } from '../components/SafeImage';
 import type { AppRoute } from '../components/Header';
 
@@ -50,11 +54,57 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [selectedSize, setSelectedSize] = useState<ProductSize | null>(null);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [hdState, setHdState] = useState<{
+    forSrc: string;
+    detailUrl: string;
+    zoomUrl: string | null;
+  } | null>(null);
+
+  const baseImageSrc = product ? product.images[selectedImageIdx] || product.images[0] || '' : '';
+  const activeProductId = product?.id || '';
 
   useEffect(() => {
     setSelectedImageIdx(0);
     setSelectedSize(product?.sizes[0] || null);
   }, [productId, product]);
+
+  useEffect(() => {
+    if (!activeProductId || !isSeededLocalProductImage(activeProductId, baseImageSrc)) {
+      return;
+    }
+
+    let cancelled = false;
+    resolvePreloadedHdUrl(activeProductId, baseImageSrc, 1620).then((detailUrl) => {
+      if (!cancelled && detailUrl) {
+        setHdState({ forSrc: baseImageSrc, detailUrl, zoomUrl: null });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProductId, baseImageSrc]);
+
+  useEffect(() => {
+    if (!isGalleryOpen || !activeProductId || !isSeededLocalProductImage(activeProductId, baseImageSrc)) {
+      return;
+    }
+
+    let cancelled = false;
+    resolvePreloadedHdUrl(activeProductId, baseImageSrc, 2048).then((zoomUrl) => {
+      if (!cancelled && zoomUrl) {
+        setHdState((prev) => ({
+          forSrc: baseImageSrc,
+          detailUrl: prev?.forSrc === baseImageSrc ? prev.detailUrl : zoomUrl,
+          zoomUrl,
+        }));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isGalleryOpen, activeProductId, baseImageSrc]);
 
   useEffect(() => {
     if (!isGalleryOpen) return;
@@ -119,6 +169,9 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
   const isFitting = fittingIds.includes(product.id);
   const isWishlisted = wishlistIds.includes(product.id);
+  const matchedHd = hdState && hdState.forSrc === baseImageSrc ? hdState : null;
+  const displayImageSrc = matchedHd?.detailUrl || baseImageSrc;
+  const zoomImageSrc = matchedHd?.zoomUrl || matchedHd?.detailUrl || baseImageSrc;
 
   const measurementRows = [
     { label: 'Длина', value: formatMeasurementValue(product.measurements?.length) },
@@ -159,7 +212,8 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             className="relative aspect-[3/4] w-full bg-[#141417] border border-zinc-800/80 overflow-hidden cursor-zoom-in group"
           >
             <SafeImage
-              src={product.images[selectedImageIdx] || product.images[0]}
+              src={displayImageSrc}
+              fallbackSrc={displayImageSrc !== baseImageSrc ? baseImageSrc : undefined}
               alt={product.title}
               className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02] ${
                 !product.inStock ? 'opacity-60 grayscale' : ''
@@ -487,8 +541,14 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             )}
 
             <img
-              src={product.images[selectedImageIdx] || product.images[0]}
+              src={zoomImageSrc}
+              referrerPolicy="no-referrer"
               alt={product.title}
+              onError={(e) => {
+                if (baseImageSrc && e.currentTarget.src !== baseImageSrc) {
+                  e.currentTarget.src = baseImageSrc;
+                }
+              }}
               className="max-h-[75vh] max-w-[92vw] object-contain shadow-2xl transition-all duration-200"
             />
 
@@ -523,7 +583,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                       : 'border-zinc-800 opacity-60 hover:opacity-100'
                   }`}
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <img src={img} referrerPolicy="no-referrer" alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>

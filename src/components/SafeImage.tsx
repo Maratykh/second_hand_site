@@ -3,6 +3,7 @@ import { Shirt } from 'lucide-react';
 
 interface SafeImageProps {
   src?: string;
+  fallbackSrc?: string;
   alt: string;
   className?: string;
   fallbackLabel?: string;
@@ -10,17 +11,30 @@ interface SafeImageProps {
 
 export const SafeImage: React.FC<SafeImageProps> = ({
   src,
+  fallbackSrc,
   alt,
   className = '',
   fallbackLabel,
 }) => {
-  const [failed, setFailed] = useState(false);
+  const [failedPrimary, setFailedPrimary] = useState(false);
+  const [failedFallback, setFailedFallback] = useState(false);
 
   useEffect(() => {
-    setFailed(false);
+    setFailedPrimary(false);
   }, [src]);
 
-  if (!src || failed) {
+  useEffect(() => {
+    setFailedFallback(false);
+  }, [fallbackSrc]);
+
+  const activeSrc =
+    !failedPrimary && src
+      ? src
+      : !failedFallback && fallbackSrc
+        ? fallbackSrc
+        : undefined;
+
+  if (!activeSrc) {
     return (
       <div
         className={`flex flex-col items-center justify-center bg-gradient-to-br from-[#16161A] to-[#0E0E11] text-zinc-500 p-4 text-center ${className}`}
@@ -37,10 +51,16 @@ export const SafeImage: React.FC<SafeImageProps> = ({
 
   return (
     <img
-      src={src}
+      src={activeSrc}
       alt={alt}
       referrerPolicy="no-referrer"
-      onError={() => setFailed(true)}
+      onError={() => {
+        if (!failedPrimary && src) {
+          setFailedPrimary(true);
+        } else {
+          setFailedFallback(true);
+        }
+      }}
       className={className}
       loading="lazy"
       decoding="async"
