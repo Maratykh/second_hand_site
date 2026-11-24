@@ -34,8 +34,17 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   productId,
   onNavigate,
 }) => {
-  const { products, fittingIds, toggleFitting, wishlistIds, toggleWishlist, isAdmin, setProductInStock, deleteProduct } =
-    useStore();
+  const {
+    products,
+    productsLoading,
+    fittingIds,
+    toggleFitting,
+    wishlistIds,
+    toggleWishlist,
+    isAdmin,
+    setProductInStock,
+    deleteProduct,
+  } = useStore();
   const product = products.find((p) => p.id === productId);
 
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
@@ -66,13 +75,29 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     };
   }, [isGalleryOpen, product?.images]);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!product) return;
     if (window.confirm(`Вы уверены, что хотите безвозвратно удалить товар «${product.title}»?`)) {
-      deleteProduct(product.id);
-      onNavigate({ page: 'catalog' });
+      try {
+        await deleteProduct(product.id);
+        onNavigate({ page: 'catalog' });
+      } catch {
+        // Error toast handled in StoreContext
+      }
     }
   };
+
+  if (!product && productsLoading) {
+    return (
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+        <div className="h-5 w-36 bg-zinc-900 border border-zinc-800 animate-pulse" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+          <div className="lg:col-span-7 aspect-[3/4] bg-[#111114] border border-zinc-800 animate-pulse" />
+          <div className="lg:col-span-5 h-[420px] bg-[#111114] border border-zinc-800 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -240,7 +265,9 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setProductInStock(product.id, !product.inStock)}
+                  onClick={() => {
+                    void setProductInStock(product.id, !product.inStock).catch(() => {});
+                  }}
                   className={`py-2.5 px-4 text-xs font-mono font-bold uppercase tracking-wider transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5 ${
                     product.inStock
                       ? 'bg-red-950/50 border border-red-800 text-red-200 hover:bg-red-900'

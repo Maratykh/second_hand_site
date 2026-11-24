@@ -117,7 +117,7 @@ export const BRAND_INFO = {
   vkOwnerId: '-139575762',
   reviewsUrl: 'https://vk.com/albums-139575762',
   socials: {
-    telegram: 'http://t.me/lavkazombie',
+    telegram: 'https://t.me/lavkazombie',
     vk: 'https://vk.com/albums-139575762',
     instagram: 'https://www.instagram.com/lavkazombie/',
     tiktok: '@lavkazombie',
@@ -217,7 +217,7 @@ export const CATEGORY_SUBCATEGORIES: Record<ProductCategory, SubCategoryDef[]> =
     {
       key: 'bags',
       label: 'Сумки & Рюкзаки',
-      match: (t, d) => /сумк|шопер|шоппер|рюкзак|мешок|bag|backpack/i.test(`${t} ${d}`),
+      match: (t, d) => /сумк|шопер|шоппер|рюкзак|мешок|кошел|bag|backpack/i.test(`${t} ${d}`),
     },
     {
       key: 'eyewear',
@@ -227,12 +227,14 @@ export const CATEGORY_SUBCATEGORIES: Record<ProductCategory, SubCategoryDef[]> =
     {
       key: 'headwear',
       label: 'Шапки, кепки & бафы',
-      match: (t, d) => /шапк|кепк|кепи|панам|бейсболк|баф|бафф|buff|снуд|шарф|перчатк|варежк|носки|повязк|beanie|cap|hat/i.test(`${t} ${d}`),
+      match: (t, d) => /шапк|кепк|кепи|панам|бейсболк|берет|балаклав|ушанк|баф|бафф|buff|снуд|шарф|перчатк|варежк|носки|повязк|beanie|cap|hat/i.test(`${t} ${d}`),
     },
     {
       key: 'jewelry_belts',
-      label: 'Украшения & Ремни',
-      match: (t, d) => /кольц|ремен|цеп|браслет|значок|ring|belt/i.test(`${t} ${d}`),
+      label: 'Украшения, ремни & брелоки',
+      match: (t, d) =>
+        /кольц|ремен|цеп|браслет|значок|брелок|подвеск|ring|belt/i.test(`${t} ${d}`) ||
+        !/сумк|шопер|шоппер|рюкзак|мешок|кошел|bag|backpack|очк|glasses|sunglasses|шапк|кепк|кепи|панам|бейсболк|берет|балаклав|ушанк|баф|бафф|buff|снуд|шарф|перчатк|варежк|носки|повязк|beanie|cap|hat/i.test(`${t} ${d}`),
     },
   ],
   pants: [
@@ -272,20 +274,20 @@ export const CATEGORY_SUBCATEGORIES: Record<ProductCategory, SubCategoryDef[]> =
     },
     {
       key: 'sweatshirts',
-      label: 'Свитшоты',
-      match: (t, d) => /свитшот|sweatshirt|crewneck/i.test(`${t} ${d}`),
+      label: 'Свитшоты & Лонгсливы',
+      match: (t, d) => /свитшот|лонгслив|толстовк|кардиган|sweatshirt|crewneck/i.test(`${t} ${d}`),
     },
     {
       key: 'sweaters',
-      label: 'Свитеры',
-      match: (t, d) => /свитер|джемпер|кофт|вязаный|knit|sweater/i.test(`${t} ${d}`),
+      label: 'Свитеры & Флиски',
+      match: (t, d) => /свитер|джемпер|кофт|вязаный|флис|fleece|knit|sweater/i.test(`${t} ${d}`),
     },
   ],
   jackets: [
     {
       key: 'windbreakers',
-      label: 'Ветровки',
-      match: (t) => /ветровк|дождевик|windbreaker|анорак/i.test(t),
+      label: 'Ветровки & Олимпийки',
+      match: (t) => /ветровк|дождевик|windbreaker|анорак|олимпийк/i.test(t),
     },
     {
       key: 'bombers',
@@ -302,7 +304,7 @@ export const CATEGORY_SUBCATEGORIES: Record<ProductCategory, SubCategoryDef[]> =
       label: 'Куртки & Пуховики',
       match: (t) =>
         /куртк|пуховик|пальто|плащ|жилет/i.test(t) &&
-        !/ветровк|дождевик|бомбер|косух|джинсовк/i.test(t),
+        !/ветровк|дождевик|бомбер|косух|джинсовк|олимпийк/i.test(t),
     },
   ],
 };
@@ -314,7 +316,7 @@ export const PRODUCT_STATUS_LABELS: Record<ProductStatus, string> = {
 
 export const CLOTHING_SIZES: ProductSize[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'ONE SIZE'];
 export const SHOE_SIZES: ProductSize[] = [
-  '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49'
+  '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50'
 ];
 export const ALL_SIZES: ProductSize[] = CLOTHING_SIZES;
 

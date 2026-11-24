@@ -41,6 +41,7 @@ import { SafeImage } from '../components/SafeImage';
 import { AdminProductFormModal } from '../components/admin/AdminProductFormModal';
 import { AdminProductEditPage } from '../components/admin/AdminProductEditPage';
 import { getLockoutStatus } from '../utils/adminAuth';
+import { compressImageFileToDataUrl } from '../utils/imageUpload';
 import type { AppRoute } from '../components/Header';
 
 type AdminTab = 'inventory' | 'analytics' | 'hero' | 'settings';
@@ -59,6 +60,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
     changeAdminPassword,
     adminProducts,
     setProductInStock,
+    setProductStatus,
+    resetAllStockOverrides,
     deleteProduct,
     showToast,
     heroSettings,
@@ -210,7 +213,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
         const descMatch = (p.description || '').toLowerCase();
         const categoryMatch = (CATEGORY_LABELS[p.category] || '').toLowerCase();
         const sizeMatch = (p.sizes || []).join(' ').toLowerCase();
-        const combined = `${titleMatch} ${descMatch} ${categoryMatch} ${sizeMatch}`;
+        const extraMatch = `${p.id} ${p.era || ''} ${p.condition || ''}`.toLowerCase();
+        const combined = `${titleMatch} ${descMatch} ${categoryMatch} ${sizeMatch} ${extraMatch}`;
 
         return tokens.every((token) => combined.includes(token));
       });
@@ -264,35 +268,47 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
       return;
     }
 
-    const success = await changeAdminPassword(newPassInput);
-    if (success) {
-      setPassChangeSuccess(true);
-      setNewPassInput('');
-      setConfirmPassInput('');
-      showToast('Пароль успешно обновлён!');
-    } else {
-      setPassChangeError('Ошибка при сохранении пароля');
+    try {
+      const success = await changeAdminPassword(newPassInput);
+      if (success) {
+        setPassChangeSuccess(true);
+        setNewPassInput('');
+        setConfirmPassInput('');
+        showToast('Пароль успешно обновлён на всех устройствах!');
+      } else {
+        setPassChangeError('Ошибка при сохранении пароля');
+      }
+    } catch (err) {
+      setPassChangeError(err instanceof Error ? err.message : 'Ошибка при сохранении пароля');
     }
   };
 
-  const handleSaveHero = (e: React.FormEvent) => {
+  const handleSaveHero = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateHeroSettings({
-      badge: heroBadgeInput.trim(),
-      title: heroTitleInput.trim(),
-      description: heroDescInput.trim(),
-      bannerImage: heroBannerInput.trim(),
-    });
+    try {
+      await updateHeroSettings({
+        badge: heroBadgeInput.trim(),
+        title: heroTitleInput.trim(),
+        description: heroDescInput.trim(),
+        bannerImage: heroBannerInput.trim() || '/assets/images/hero_banner.jpg',
+      });
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Не удалось сохранить афишу');
+    }
   };
 
-  const handleSavePromo = (e: React.FormEvent) => {
+  const handleSavePromo = async (e: React.FormEvent) => {
     e.preventDefault();
-    updatePromoSettings({
-      enabled: promoEnabledInput,
-      badge: promoBadgeInput.trim(),
-      text: promoTextInput.trim(),
-      linkText: promoLinkTextInput.trim(),
-    });
+    try {
+      await updatePromoSettings({
+        enabled: promoEnabledInput,
+        badge: promoBadgeInput.trim(),
+        text: promoTextInput.trim(),
+        linkText: promoLinkTextInput.trim(),
+      });
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Не удалось сохранить промо-строку');
+    }
   };
 
   const handleApplyPromoPreset = (badge: string, text: string, link: string) => {
@@ -302,53 +318,30 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
     setPromoLinkTextInput(link);
   };
 
-  const handleHeroFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleHeroFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setHeroUploadLoading(true);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const rawData = ev.target?.result as string;
-      const img = new window.Image();
-      img.onload = () => {
-        const maxDim = 1600;
-        let w = img.width;
-        let h = img.height;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) {
-            h = Math.round((h * maxDim) / w);
-            w = maxDim;
-          } else {
-            w = Math.round((w * maxDim) / h);
-            h = maxDim;
-          }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, w, h);
-          setHeroBannerInput(canvas.toDataURL('image/jpeg', 0.88));
-        } else {
-          setHeroBannerInput(rawData);
-        }
-        setHeroUploadLoading(false);
-      };
-      img.onerror = () => {
-        setHeroBannerInput(rawData);
-        setHeroUploadLoading(false);
-      };
-      img.src = rawData;
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    try {
+      const compressed = await compressImageFileToDataUrl(file, { maxDim: 1280, quality: 0.8 });
+      setHeroBannerInput(compressed);
+      showToast('Фото афиши готово к сохранению');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Не удалось обработать фото');
+    } finally {
+      setHeroUploadLoading(false);
+      e.target.value = '';
+    }
   };
 
-  const handleSetProductAsHero = (imageUrl: string) => {
+  const handleSetProductAsHero = async (imageUrl: string) => {
     setHeroBannerInput(imageUrl);
-    updateHeroSettings({ bannerImage: imageUrl });
-    showToast('Фото вещи установлено на главную афишу!');
+    try {
+      await updateHeroSettings({ bannerImage: imageUrl });
+      showToast('Фото вещи установлено на главную афишу!');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Не удалось обновить афишу');
+    }
   };
 
   const handleExportJson = () => {
@@ -742,6 +735,16 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
                           <span className="px-1.5 py-0.2 bg-zinc-800 text-[10px] uppercase font-mono text-zinc-300">
                             {CATEGORY_LABELS[product.category] || product.category}
                           </span>
+                          {product.status === 'draft' && (
+                            <button
+                              type="button"
+                              onClick={() => void setProductStatus(product.id, 'published')}
+                              title="Нажмите, чтобы опубликовать черновик"
+                              className="px-1.5 py-0.2 bg-amber-950/60 border border-amber-700/70 text-[10px] uppercase font-mono text-amber-300 hover:bg-amber-900/60 cursor-pointer"
+                            >
+                              Черновик (опубликовать)
+                            </button>
+                          )}
                           {product.measurements?.width && (
                             <span className="text-zinc-500 text-[11px]">
                               Грудь: {product.measurements.width}
@@ -955,8 +958,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
                 {topInterestProducts.map((item, idx) => (
                   <div key={item.product.id} className="py-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="font-mono text-xs font-bold text-zinc-500 w-5 shrink-0">
-                        0{idx + 1}.
+                      <span className="font-mono text-xs font-bold text-zinc-500 w-6 shrink-0">
+                        {String(idx + 1).padStart(2, '0')}.
                       </span>
                       <div className="w-10 h-12 bg-[#141417] border border-zinc-800 overflow-hidden shrink-0">
                         <SafeImage
@@ -1022,9 +1025,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
             <div className="p-3 bg-zinc-900 border border-zinc-700/70 text-xs text-zinc-300 leading-relaxed flex items-start gap-2.5">
               <Info className="w-4 h-4 text-[#A3E635] shrink-0 mt-0.5" />
               <div>
-                <span className="font-semibold text-white">Синхронизация между устройствами:</span>
+                <span className="font-semibold text-white">Облачная синхронизация:</span>
                 <p className="mt-0.5 text-zinc-400">
-                  Установленное фото афиши зафиксировано в файлах сайта (<code className="text-zinc-200 font-mono">/assets/images/hero_banner.jpg</code>) и отображается на всех телефонах, компьютерах и у посетителей.
+                  Любые изменения заголовка, текста и изображения афиши сразу сохраняются в облачную базу и отображаются у всех посетителей на любых устройствах.
                 </p>
               </div>
             </div>
@@ -1069,10 +1072,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
                 </label>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <input
-                    type="url"
+                    type="text"
                     value={heroBannerInput}
                     onChange={(e) => setHeroBannerInput(e.target.value)}
-                    placeholder="Вставьте прямую ссылку на фото (VK, Imgur, Telegram...)"
+                    placeholder="/assets/images/hero_banner.jpg или прямая ссылка https://..."
                     className="flex-1 bg-[#18181B] border border-zinc-700 px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#A3E635]"
                   />
 
@@ -1140,7 +1143,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
 
                 <button
                   type="button"
-                  onClick={resetHeroSettings}
+                  onClick={() => {
+                    void resetHeroSettings().catch((err) =>
+                      showToast(err instanceof Error ? err.message : 'Не удалось сбросить афишу')
+                    );
+                  }}
                   className="px-4 py-3 bg-[#18181B] border border-zinc-700 hover:border-zinc-500 text-xs text-zinc-300 uppercase tracking-wider transition-colors cursor-pointer"
                 >
                   Сбросить по умолчанию
@@ -1328,7 +1335,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
 
                 <button
                   type="button"
-                  onClick={resetPromoSettings}
+                  onClick={() => {
+                    void resetPromoSettings().catch((err) =>
+                      showToast(err instanceof Error ? err.message : 'Не удалось сбросить промо-строку')
+                    );
+                  }}
                   className="px-4 py-3 bg-[#18181B] border border-zinc-700 hover:border-zinc-500 text-xs text-zinc-300 uppercase tracking-wider transition-colors cursor-pointer"
                 >
                   Сбросить промо-строку
@@ -1351,7 +1362,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
               </h2>
             </div>
             <p className="text-xs text-zinc-400 leading-relaxed">
-              Вы можете задать новый пароль для доступа к панели. Он сразу сохранится в защищённом виде (хэш SHA-256 с солью).
+              Вы можете задать новый пароль для доступа к панели. Он сохраняется в защищённом виде (хэш SHA-256 с солью) в облачной базе и сразу начинает действовать на всех устройствах, отменяя старый пароль.
             </p>
 
             {passChangeSuccess && (
@@ -1428,10 +1439,13 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
 
               <button
                 type="button"
-                onClick={() => {
-                  if (confirm('Сбросить все отметки «Продано» и вернуть все товары в наличие?')) {
-                    localStorage.removeItem('zombie_stock_overrides_v1');
-                    window.location.reload();
+                onClick={async () => {
+                  if (confirm('Сбросить все отметки «Продано» и вернуть все товары в наличие у всех пользователей?')) {
+                    try {
+                      await resetAllStockOverrides();
+                    } catch (err) {
+                      showToast(err instanceof Error ? err.message : 'Не удалось сбросить отметки в облаке');
+                    }
                   }
                 }}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#18181B] border border-zinc-800 hover:border-red-900/60 text-xs font-semibold text-zinc-400 hover:text-red-400 uppercase tracking-wider transition-colors cursor-pointer"

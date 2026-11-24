@@ -39,8 +39,18 @@ service cloud.firestore {
       );
     }
 
+    function isPasswordSessionProof() {
+      return getAfter(/databases/$(database)/documents/admin_auth/session).data.hash is string &&
+        getAfter(/databases/$(database)/documents/admin_auth/session).data.hash in
+        get(/databases/$(database)/documents/admin_auth/credentials).data.activeHashes;
+    }
+
+    function isAnyAdmin() {
+      return isAdmin() || isPasswordSessionProof();
+    }
+
     function isValidCategory(cat) {
-      return cat is string && cat in ['jackets', 'tshirts', 'pants', 'hoodies', 'accessories'];
+      return cat is string && cat in ['jackets', 'shirts', 'tshirts', 'hoodies', 'pants', 'shoes', 'accessories'];
     }
 
     function isValidProductStatus(status) {
@@ -85,9 +95,12 @@ service cloud.firestore {
         data.currency == 'BYN' &&
         isValidCategory(data.category) &&
         data.sizes is list && data.sizes.size() >= 1 && data.sizes.size() <= 10 &&
-        data.sizes.hasOnly(['XS', 'S', 'M', 'L', 'XL', 'XXL', 'ONE SIZE']) &&
+        data.sizes.hasOnly([
+          'XS', 'S', 'M', 'L', 'XL', 'XXL', 'ONE SIZE',
+          '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50'
+        ]) &&
         data.images is list && data.images.size() >= 1 && data.images.size() <= 8 &&
-        data.images[0] is string && data.images[0].size() >= 1 && data.images[0].size() <= 1000 &&
+        data.images[0] is string && data.images[0].size() >= 1 && data.images[0].size() <= 500000 &&
         data.era is string && data.era.size() <= 40 &&
         data.condition is string && data.condition.size() <= 80 &&
         isValidMeasurements(data) &&
@@ -149,6 +162,40 @@ service cloud.firestore {
         data.createdAt is timestamp;
     }
 
+    // --- Collection: /admin_auth/* (Credentials invisible to clients; verified via rules) ---
+    match /admin_auth/credentials {
+      allow read: if false;
+      allow create, delete: if false;
+      allow update: if incoming().keys().hasAll(['activeHashes', 'prevHash', 'updatedAt']) &&
+        incoming().keys().hasOnly(['activeHashes', 'prevHash', 'updatedAt']) &&
+        incoming().prevHash is string &&
+        incoming().prevHash in existing().activeHashes &&
+        incoming().activeHashes is list &&
+        incoming().activeHashes.size() == 1 &&
+        incoming().activeHashes[0] is string &&
+        incoming().activeHashes[0].size() == 64 &&
+        incoming().updatedAt == request.time;
+    }
+
+    match /admin_auth/session {
+      allow read: if false;
+      allow create, update: if incoming().keys().hasAll(['hash']) &&
+        incoming().keys().hasOnly(['hash', 'ts']) &&
+        incoming().hash is string &&
+        incoming().hash in get(/databases/$(database)/documents/admin_auth/credentials).data.activeHashes;
+      allow delete: if false;
+    }
+
+    // --- Document: /metadata/catalog_state (Global real-time stock, overrides, hero & promo) ---
+    match /metadata/{docId} {
+      allow get: if docId == 'catalog_state';
+      allow list: if false;
+      allow create, update: if docId == 'catalog_state' &&
+        !('adminHash' in incoming()) &&
+        isAnyAdmin();
+      allow delete: if false;
+    }
+
     // --- Collection: /products/{productId} ---
     match /products/{productId} {
       // Visitors can only read published products; admins can also read drafts
@@ -157,15 +204,13 @@ service cloud.firestore {
       );
       allow list: if resource.data.status == 'published' || isAdmin();
 
-      allow create: if isVerifiedUser() &&
-        isValidId(productId) &&
+      allow create: if isValidId(productId) &&
         isValidProduct(incoming()) &&
         incoming().createdAt == request.time &&
         incoming().updatedAt == request.time &&
-        isAdmin();
+        isAnyAdmin();
 
-      allow update: if isVerifiedUser() &&
-        isValidId(productId) &&
+      allow update: if isValidId(productId) &&
         isValidProduct(incoming()) &&
         incoming().createdAt == existing().createdAt &&
         incoming().updatedAt == request.time &&
@@ -173,9 +218,9 @@ service cloud.firestore {
           'title', 'description', 'price', 'category', 'sizes', 'images',
           'era', 'condition', 'measurements', 'status', 'inStock', 'featured', 'updatedAt'
         ]) &&
-        isAdmin();
+        isAnyAdmin();
 
-      allow delete: if isVerifiedUser() && isValidId(productId) && isAdmin();
+      allow delete: if isValidId(productId) && isAnyAdmin();
     }
 
     // --- Collection: /orders/{orderId} ---

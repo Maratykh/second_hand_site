@@ -1,25 +1,19 @@
+import { doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import firebaseConfig from '../../firebase-applet-config.json';
+import { db } from '../lib/firebase';
+
 /**
- * Secure Admin Authentication & Protection for "Лавка Зомби"
+ * Secure Admin Authentication & Cross-Device Credential Management for "Лавка Зомби"
  * Features:
- * - Login & Password (no Google OAuth / domain restrictions)
- * - Salted SHA-256 password hashing via Web Crypto API
+ * - Login & Password validated against Firestore /admin_auth/credentials via server rules
+ * - Zero secret password hashes readable by public clients
+ * - Password changes apply across all devices & immediately revoke prior passwords
  * - Brute-force protection: 5 attempts max, 15-minute lockout with countdown
- * - Session storage with expiration
- * - Customizable admin password
  */
 
 const SALT = 'lavka_zombie_salt_2026_minsk';
 const SESSION_KEY = 'zombie_admin_session';
 const ATTEMPTS_KEY = 'zombie_admin_attempts';
-const CUSTOM_HASH_KEY = 'zombie_custom_admin_hash';
-
-// Pre-computed salted SHA-256 hashes for standard allowed passwords
-// salt: 'lavka_zombie_salt_2026_minsk'
-const VALID_HASHES = new Set([
-  '8ab76e6a141adfab35933668bed37f41d5ee92f987b290419dd6fc2d6ef91982', // Zombie2026#Vault!Minsk
-  '743d00001bc18c1046ee0bcead7a087395e93f9d1b9225dc01f89301b38fd5cd', // LZ#90s_Vintage!Minsk
-  'e148fc42899e6ef2cda9be040d6c2a633ab61ffabb3fb1da0f786bcf3b556b39', // ZombieMinsk2026!
-]);
 
 const ALLOWED_USERNAMES = new Set([
   'zombie_boss',
@@ -58,7 +52,6 @@ export function getLockoutStatus(): LockoutStatus {
       return { isLocked: true, remainingSeconds, remainingAttempts: 0 };
     }
 
-    // Reset if window has passed (> 10 mins since first attempt)
     if (data.firstAttemptTime && now - data.firstAttemptTime > 10 * 60 * 1000) {
       localStorage.removeItem(ATTEMPTS_KEY);
       return { isLocked: false, remainingSeconds: 0, remainingAttempts: 5 };
@@ -90,7 +83,7 @@ export function recordFailedAttempt(): LockoutStatus {
   if (!data.firstAttemptTime) data.firstAttemptTime = now;
 
   if (data.count >= 5) {
-    data.lockoutUntil = now + 15 * 60 * 1000; // 15 mins lock
+    data.lockoutUntil = now + 15 * 60 * 1000;
   }
 
   try {
@@ -108,10 +101,8 @@ export function resetFailedAttempts(): void {
 
 export function checkAdminSession(): boolean {
   try {
-    // Check sessionStorage first
     let raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) {
-      // Check localStorage for "remember me"
       raw = localStorage.getItem(SESSION_KEY);
     }
     if (!raw) return false;
@@ -119,8 +110,13 @@ export function checkAdminSession(): boolean {
     const session = JSON.parse(raw);
     const now = Date.now();
 
-    // Max session duration: 7 days
-    if (session && session.auth === true && session.expiresAt > now) {
+    if (
+      session &&
+      session.auth === true &&
+      typeof session.adminHash === 'string' &&
+      session.adminHash.length === 64 &&
+      session.expiresAt > now
+    ) {
       return true;
     }
     clearAdminSession();
@@ -130,13 +126,13 @@ export function checkAdminSession(): boolean {
   }
 }
 
-export function saveAdminSession(adminHash?: string, rememberMe: boolean = true): void {
+export function saveAdminSession(adminHash: string, rememberMe: boolean = true): void {
   const now = Date.now();
-  // 7 days if rememberMe, otherwise 12 hours
   const duration = rememberMe ? 7 * 24 * 60 * 60 * 1000 : 12 * 60 * 60 * 1000;
   const session = {
     auth: true,
-    adminHash: adminHash || 'e148fc42899e6ef2cda9be040d6c2a633ab61ffabb3fb1da0f786bcf3b556b39',
+    adminHash,
+    rememberMe,
     createdAt: now,
     expiresAt: now + duration,
   };
@@ -145,19 +141,23 @@ export function saveAdminSession(adminHash?: string, rememberMe: boolean = true)
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     if (rememberMe) {
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    } else {
+      localStorage.removeItem(SESSION_KEY);
     }
   } catch {}
 }
 
 export function getAdminHash(): string {
   try {
-    let raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
+    const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.adminHash) return parsed.adminHash;
+      if (typeof parsed.adminHash === 'string' && parsed.adminHash.length === 64) {
+        return parsed.adminHash;
+      }
     }
   } catch {}
-  return 'e148fc42899e6ef2cda9be040d6c2a633ab61ffabb3fb1da0f786bcf3b556b39';
+  return '';
 }
 
 export function clearAdminSession(): void {
@@ -165,6 +165,34 @@ export function clearAdminSession(): void {
     sessionStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(SESSION_KEY);
   } catch {}
+}
+
+function isPermissionDeniedError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const code = (err as { code?: string }).code || '';
+  const message = (err as { message?: string }).message || '';
+  return code === 'permission-denied' || /permission[_-]denied/i.test(message);
+}
+
+async function verifyHashViaRestProbe(inputHash: string): Promise<'ok' | 'denied' | 'network'> {
+  try {
+    const dbId = firebaseConfig.firestoreDatabaseId || '(default)';
+    const url = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${dbId}/documents/admin_auth/session?key=${encodeURIComponent(firebaseConfig.apiKey)}`;
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fields: {
+          hash: { stringValue: inputHash },
+        },
+      }),
+    });
+    if (res.ok) return 'ok';
+    if (res.status === 403 || res.status === 401) return 'denied';
+    return 'network';
+  } catch {
+    return 'network';
+  }
 }
 
 export async function verifyAdminCredentials(
@@ -186,8 +214,8 @@ export async function verifyAdminCredentials(
     return { success: false, error: 'Введите логин и пароль' };
   }
 
-  // Check username
   if (!ALLOWED_USERNAMES.has(username)) {
+    await new Promise((r) => setTimeout(r, 350));
     const updated = recordFailedAttempt();
     return {
       success: false,
@@ -195,16 +223,34 @@ export async function verifyAdminCredentials(
     };
   }
 
-  // Artificial anti-timing attack delay
-  await new Promise((r) => setTimeout(r, 400));
-
   const inputHash = await hashPasswordWithSalt(passwordInput);
 
-  // Check custom password if set
-  const customHash = localStorage.getItem(CUSTOM_HASH_KEY);
-  const isValid = (customHash && customHash === inputHash) || VALID_HASHES.has(inputHash);
+  let verified = false;
+  let denied = false;
 
-  if (!isValid) {
+  try {
+    await setDoc(doc(db, 'admin_auth', 'session'), {
+      hash: inputHash,
+      ts: serverTimestamp(),
+    });
+    verified = true;
+  } catch (err) {
+    if (isPermissionDeniedError(err)) {
+      denied = true;
+    } else {
+      const restResult = await verifyHashViaRestProbe(inputHash);
+      if (restResult === 'ok') verified = true;
+      else if (restResult === 'denied') denied = true;
+      else {
+        return {
+          success: false,
+          error: 'Нет связи с облачной базой данных. Проверьте интернет и повторите попытку.',
+        };
+      }
+    }
+  }
+
+  if (denied || !verified) {
     const updated = recordFailedAttempt();
     if (updated.isLocked) {
       return {
@@ -218,7 +264,6 @@ export async function verifyAdminCredentials(
     };
   }
 
-  // Success
   resetFailedAttempts();
   saveAdminSession(inputHash, rememberMe);
   return { success: true };
@@ -228,7 +273,37 @@ export async function changeAdminPassword(newPassword: string): Promise<boolean>
   if (!newPassword || newPassword.length < 6) {
     throw new Error('Пароль должен содержать минимум 6 символов');
   }
-  const hash = await hashPasswordWithSalt(newPassword);
-  localStorage.setItem(CUSTOM_HASH_KEY, hash);
+
+  const prevHash = getAdminHash();
+  if (!prevHash) {
+    throw new Error('Текущая сессия недействительна. Выйдите и войдите заново.');
+  }
+
+  const newHash = await hashPasswordWithSalt(newPassword);
+
+  try {
+    await updateDoc(doc(db, 'admin_auth', 'credentials'), {
+      activeHashes: [newHash],
+      prevHash,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (err) {
+    if (isPermissionDeniedError(err)) {
+      clearAdminSession();
+      throw new Error('Текущая сессия устарела или пароль уже был изменён. Войдите заново.');
+    }
+    throw new Error('Не удалось обновить пароль в облаке. Проверьте подключение к интернету.');
+  }
+
+  let remember = true;
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      remember = parsed.rememberMe !== false;
+    }
+  } catch {}
+
+  saveAdminSession(newHash, remember);
   return true;
 }

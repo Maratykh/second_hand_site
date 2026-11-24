@@ -23,24 +23,27 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [headerSearch, setHeaderSearch] = useState('');
 
-  const navItems: Array<{ label: string; route: AppRoute; key: string }> = [
-    { label: 'Главная', route: { page: 'home' }, key: 'home' },
-    { label: 'Каталог', route: { page: 'catalog' }, key: 'catalog' },
+  const navItems: Array<{ label: string; route: AppRoute; key: string; href: string }> = [
+    { label: 'Главная', route: { page: 'home' }, key: 'home', href: '#/' },
+    { label: 'Каталог', route: { page: 'catalog' }, key: 'catalog', href: '#/catalog' },
     {
       label: 'В наличии',
       route: { page: 'catalog', inStock: true },
       key: 'inStock',
+      href: '#/catalog?inStock=true',
     },
     {
       label: validFittingCount > 0 ? `Примерки (${validFittingCount})` : 'Примерки',
       route: { page: 'fittings', tab: 'fittings' },
       key: 'fittings',
+      href: '#/fittings',
     },
-    { label: 'Шоурум', route: { page: 'about' }, key: 'about' },
+    { label: 'Шоурум', route: { page: 'about' }, key: 'about', href: '#/about' },
     {
       label: isAdmin ? '⚡ Наличие (Админ)' : 'Сотрудникам',
       route: { page: 'admin' },
       key: 'admin',
+      href: '#/admin',
     },
   ];
 
@@ -122,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
             return (
               <a
                 key={item.key}
-                href={`#/${item.key === 'home' ? '' : item.key}`}
+                href={item.href}
                 onClick={(e) => {
                   e.preventDefault();
                   handleLinkClick(item.route);
@@ -184,7 +187,7 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
               return (
                 <a
                   key={item.key}
-                  href={`#/${item.key === 'home' ? '' : item.key}`}
+                  href={item.href}
                   onClick={(e) => {
                     e.preventDefault();
                     handleLinkClick(item.route);

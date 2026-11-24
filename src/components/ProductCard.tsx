@@ -29,14 +29,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, ind
   const handleToggleStock = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    await setProductInStock(product.id, !product.inStock);
+    try {
+      await setProductInStock(product.id, !product.inStock);
+    } catch {
+      // Error toast handled in StoreContext
+    }
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     if (window.confirm(`Удалить вещь «${displayTitle}» из каталога?`)) {
-      await deleteProduct(product.id);
+      try {
+        await deleteProduct(product.id);
+      } catch {
+        // Error toast handled in StoreContext
+      }
     }
   };
 

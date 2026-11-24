@@ -241,12 +241,27 @@ export function generateOrderNumber(now = new Date()): string {
   return `LZ-${yy}${mm}${dd}-${suffix}`;
 }
 
+const SAFE_DATA_IMAGE_RE = /^data:image\/(?:jpeg|jpg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/i;
+const MAX_DATA_IMAGE_LENGTH = 450_000;
+
 export function sanitizeImageUrl(url: string): string | null {
   const trimmed = url.trim();
-  if (!trimmed || trimmed.length > 1000) return null;
-  if (trimmed.startsWith('/src/assets/')) {
+  if (!trimmed) return null;
+
+  if (SAFE_DATA_IMAGE_RE.test(trimmed)) {
+    return trimmed.length <= MAX_DATA_IMAGE_LENGTH ? trimmed : null;
+  }
+
+  if (trimmed.length > 1000) return null;
+
+  if (
+    (trimmed.startsWith('/assets/') || trimmed.startsWith('/src/assets/')) &&
+    !trimmed.includes('..') &&
+    !/[\s<>"'`\\]/.test(trimmed)
+  ) {
     return trimmed;
   }
+
   try {
     const parsed = new URL(trimmed);
     if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {

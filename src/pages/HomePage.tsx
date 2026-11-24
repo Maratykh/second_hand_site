@@ -41,11 +41,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
   const displayArrivals = React.useMemo(() => {
     if (heroSettings?.featuredProductIds && heroSettings.featuredProductIds.length > 0) {
       const idSet = new Set(heroSettings.featuredProductIds);
-      const matched = products.filter((p) => idSet.has(p.id));
+      const matched = products.filter((p) => idSet.has(p.id) && p.inStock);
       if (matched.length > 0) return matched.slice(0, 4);
     }
-    const newArrivals = products.filter((p) => p.featured).slice(0, 4);
-    return newArrivals.length > 0 ? newArrivals : products.slice(0, 4);
+    const inStockFeatured = products.filter((p) => p.featured && p.inStock).slice(0, 4);
+    if (inStockFeatured.length > 0) return inStockFeatured;
+    const anyFeatured = products.filter((p) => p.featured).slice(0, 4);
+    return anyFeatured.length > 0 ? anyFeatured : products.slice(0, 4);
   }, [products, heroSettings?.featuredProductIds]);
 
   const categoryCounts = PRODUCT_CATEGORIES.map((cat) => ({

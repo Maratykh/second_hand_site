@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Download, Upload, X } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import type { Product, ProductCategory, ProductSize, ProductStatus } from '../../types/store';
-import { ALL_SIZES, PRODUCT_CATEGORIES, SCHEMA_LIMITS } from '../../types/store';
+import { CLOTHING_SIZES, PRODUCT_CATEGORIES, SCHEMA_LIMITS, SHOE_SIZES } from '../../types/store';
 import { downloadProductPhoto } from '../../utils/downloadImage';
 import { sanitizeImageUrl, sanitizeMeasurements, validateProductFormData } from '../../utils/storeLogic';
 
@@ -58,60 +58,13 @@ export const AdminProductFormModal: React.FC<AdminProductFormModalProps> = ({
 
     try {
       const url = await uploadProductImage(file);
-      setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${url}` : url));
-      setUploading(false);
-    } catch {
-      // Offline / client-side canvas compression fallback
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const rawData = ev.target?.result as string;
-        const img = new Image();
-        img.onload = () => {
-          const maxDim = 900;
-          let w = img.width;
-          let h = img.height;
-          if (w > maxDim || h > maxDim) {
-            if (w > h) {
-              h = Math.round((h * maxDim) / w);
-              w = maxDim;
-            } else {
-              w = Math.round((w * maxDim) / h);
-              h = maxDim;
-            }
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, w, h);
-            let compressed = '';
-            try {
-              compressed = canvas.toDataURL('image/webp', 0.82);
-              if (!compressed.startsWith('data:image/webp')) {
-                compressed = canvas.toDataURL('image/jpeg', 0.82);
-              }
-            } catch {
-              compressed = canvas.toDataURL('image/jpeg', 0.82);
-            }
-            setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${compressed}` : compressed));
-          } else {
-            setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${rawData}` : rawData));
-          }
-          setUploading(false);
-        };
-        img.onerror = () => {
-          setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${rawData}` : rawData));
-          setUploading(false);
-        };
-        img.src = rawData;
-      };
-      reader.onerror = () => {
-        setError('Не удалось прочитать выбранный файл.');
-        setUploading(false);
-      };
-      reader.readAsDataURL(file);
+      if (url) {
+        setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${url}` : url));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось загрузить выбранное фото.');
     } finally {
+      setUploading(false);
       e.target.value = '';
     }
   };
@@ -298,7 +251,7 @@ export const AdminProductFormModal: React.FC<AdminProductFormModalProps> = ({
           <div className="space-y-2">
             <span className="block text-xs font-medium text-zinc-300">Размеры *</span>
             <div className="flex flex-wrap gap-2">
-              {ALL_SIZES.map((s) => {
+              {Array.from(new Set([...(category === 'shoes' ? SHOE_SIZES : CLOTHING_SIZES), ...sizes])).map((s) => {
                 const active = sizes.includes(s);
                 return (
                   <button

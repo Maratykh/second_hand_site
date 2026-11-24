@@ -1,17 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft,
   Check,
   Download,
   ExternalLink,
-  Eye,
   Trash2,
   Upload,
   X,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import type { Product, ProductCategory, ProductSize, ProductStatus } from '../../types/store';
-import { ALL_SIZES, PRODUCT_CATEGORIES, SCHEMA_LIMITS } from '../../types/store';
+import type { ProductCategory, ProductSize, ProductStatus } from '../../types/store';
+import { CLOTHING_SIZES, PRODUCT_CATEGORIES, SCHEMA_LIMITS, SHOE_SIZES } from '../../types/store';
 import { downloadProductPhoto } from '../../utils/downloadImage';
 import { sanitizeImageUrl, sanitizeMeasurements, validateProductFormData } from '../../utils/storeLogic';
 import type { AppRoute } from '../Header';
@@ -27,11 +26,13 @@ export const AdminProductEditPage: React.FC<AdminProductEditPageProps> = ({
   onNavigate,
   onBack,
 }) => {
-  const { products, saveProduct, uploadProductImage, deleteProduct, showToast } = useStore();
+  const { adminProducts, productsLoading, saveProduct, uploadProductImage, deleteProduct, showToast } =
+    useStore();
 
   const isNew = !productId || productId === 'new';
-  const existingProduct = isNew ? null : products.find((p) => p.id === productId);
+  const existingProduct = isNew ? null : adminProducts.find((p) => p.id === productId);
 
+  const [hydratedId, setHydratedId] = useState<string | null>(existingProduct?.id || (isNew ? 'new' : null));
   const [title, setTitle] = useState(existingProduct?.title || '');
   const [description, setDescription] = useState(existingProduct?.description || '');
   const [price, setPrice] = useState(
@@ -58,10 +59,45 @@ export const AdminProductEditPage: React.FC<AdminProductEditPageProps> = ({
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isNew) {
+      setHydratedId('new');
+      return;
+    }
+    if (existingProduct && hydratedId !== existingProduct.id) {
+      setTitle(existingProduct.title || '');
+      setDescription(existingProduct.description || '');
+      setPrice(existingProduct.price > 0 ? String(existingProduct.price) : '');
+      setCategory(existingProduct.category || 'jackets');
+      setSizes(existingProduct.sizes || ['L']);
+      setEra(existingProduct.era ?? '');
+      setCondition(existingProduct.condition ?? '');
+      setMeasureLength(existingProduct.measurements?.length || '');
+      setMeasureWidth(existingProduct.measurements?.width || '');
+      setMeasureSleeve(existingProduct.measurements?.sleeve || '');
+      setStatus(existingProduct.status || 'published');
+      setInStock(existingProduct.inStock ?? true);
+      setFeatured(existingProduct.featured ?? false);
+      setImagesText((existingProduct.images || []).join('\n'));
+      setHydratedId(existingProduct.id);
+    }
+  }, [isNew, existingProduct, hydratedId]);
+
   const toggleSize = (size: ProductSize) => {
     setSizes((prev) =>
       prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
     );
+  };
+
+  const handleCategoryChange = (nextCategory: ProductCategory) => {
+    setCategory(nextCategory);
+    if (isNew) {
+      if (nextCategory === 'shoes' && sizes.every((s) => CLOTHING_SIZES.includes(s))) {
+        setSizes(['42']);
+      } else if (nextCategory !== 'shoes' && sizes.every((s) => SHOE_SIZES.includes(s))) {
+        setSizes(['L']);
+      }
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,53 +110,12 @@ export const AdminProductEditPage: React.FC<AdminProductEditPageProps> = ({
       const url = await uploadProductImage(file);
       if (url) {
         setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${url}` : url));
-        showToast('Фото успешно загружено');
-        return;
+        showToast('Фото обработано и добавлено');
       }
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        const rawData = String(reader.result || '');
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const maxDim = 1200;
-          let w = img.width;
-          let h = img.height;
-          if (w > maxDim || h > maxDim) {
-            if (w > h) {
-              h = Math.round((h * maxDim) / w);
-              w = maxDim;
-            } else {
-              w = Math.round((w * maxDim) / h);
-              h = maxDim;
-            }
-          }
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, w, h);
-            const comp = canvas.toDataURL('image/jpeg', 0.82);
-            setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${comp}` : comp));
-            showToast('Фото сжато и добавлено');
-          } else {
-            setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${rawData}` : rawData));
-          }
-          setUploading(false);
-        };
-        img.onerror = () => {
-          setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${rawData}` : rawData));
-          setUploading(false);
-        };
-        img.src = rawData;
-      };
-      reader.onerror = () => {
-        setError('Не удалось прочитать выбранный файл.');
-        setUploading(false);
-      };
-      reader.readAsDataURL(file);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось загрузить выбранное фото.');
     } finally {
+      setUploading(false);
       e.target.value = '';
     }
   };
@@ -242,18 +237,60 @@ export const AdminProductEditPage: React.FC<AdminProductEditPageProps> = ({
     }
   };
 
+  if (!isNew && productsLoading && !existingProduct) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-6">
+        <div className="h-8 w-48 bg-zinc-900 border border-zinc-800 animate-pulse" />
+        <div className="h-64 bg-[#111114] border border-zinc-800 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!isNew && !productsLoading && !existingProduct) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center space-y-5">
+        <h1 className="font-display text-3xl text-white uppercase">Товар не найден</h1>
+        <p className="text-sm text-zinc-400">
+          Позиция с ID «{productId}» не найдена или была удалена.
+        </p>
+        <button
+          type="button"
+          onClick={handleGoBack}
+          className="px-6 py-3 bg-[#A3E635] text-[#09090B] text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-lime-300"
+        >
+          Вернуться в панель
+        </button>
+      </div>
+    );
+  }
+
+  const baseSizeOptions = category === 'shoes' ? SHOE_SIZES : CLOTHING_SIZES;
+  const availableSizeOptions = Array.from(new Set([...baseSizeOptions, ...sizes]));
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
       {/* Top Breadcrumb & Actions */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800 pb-5">
-        <button
-          type="button"
-          onClick={handleGoBack}
-          className="inline-flex items-center gap-2 text-xs font-mono text-zinc-400 hover:text-[#A3E635] transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Назад в каталог</span>
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={handleGoBack}
+            className="inline-flex items-center gap-2 text-xs font-mono text-zinc-400 hover:text-[#A3E635] transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>{onBack ? 'Назад в панель' : 'Назад в каталог'}</span>
+          </button>
+
+          {onBack && (
+            <button
+              type="button"
+              onClick={() => onNavigate?.({ page: 'catalog' })}
+              className="text-xs font-mono text-zinc-500 hover:text-zinc-200 underline cursor-pointer"
+            >
+              Перейти в каталог
+            </button>
+          )}
+        </div>
 
         <div className="flex items-center gap-2">
           {existingProduct && (
@@ -350,7 +387,7 @@ export const AdminProductEditPage: React.FC<AdminProductEditPageProps> = ({
               <select
                 id="prod-category"
                 value={category}
-                onChange={(e) => setCategory(e.target.value as ProductCategory)}
+                onChange={(e) => handleCategoryChange(e.target.value as ProductCategory)}
                 className="w-full px-4 py-3 bg-[#09090B] border border-zinc-800 text-sm text-white focus:outline-none focus:border-[#A3E635]"
               >
                 {PRODUCT_CATEGORIES.map((c) => (
@@ -411,7 +448,7 @@ export const AdminProductEditPage: React.FC<AdminProductEditPageProps> = ({
               Доступные размеры * (нажмите для выбора одного или нескольких)
             </span>
             <div className="flex flex-wrap gap-2">
-              {ALL_SIZES.map((s) => {
+              {availableSizeOptions.map((s) => {
                 const active = sizes.includes(s);
                 return (
                   <button
