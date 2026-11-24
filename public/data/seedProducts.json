@@ -1,5 +1,385 @@
 [
   {
+    "id": "tg-drop2-1",
+    "title": "Рюкзак McDonald's Paper Bag",
+    "description": "Культовый рюкзак McDonald's в стиле крафтового пакета с биркой-чеком и боковым карманом-фри картошкой\nцена: 50 BYN // 1500 RUB\nразмер: OS\nсостояние: Новое с бирками\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 50,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-1.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Новое с бирками",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-2",
+    "title": "Сумка через плечо Patagonia",
+    "description": "Практичная черная сумка на плечо Patagonia с классическим патчем\nцена: 45 BYN // 1350 RUB\nразмер: OS\nсостояние: Отличное\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 45,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-2.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Отличное",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-3",
+    "title": "Сумка-слинг Patagonia Black (New!)",
+    "description": "Вместительная черная сумка-слинг Patagonia на широком удобном ремне, новая с бирками\nцена: 75 BYN // 2250 RUB\nразмер: OS\nсостояние: Новое с бирками\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 75,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-3.webp"
+    ],
+    "era": "Архивный / New",
+    "condition": "Новое с бирками",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-4",
+    "title": "Сумка-тоут Patchwork Vintage (New!)",
+    "description": "Оригинальная сумка на плечо с винтажным пэчворк узором из лоскутков\nцена: 60 BYN // 1800 RUB\nразмер: OS\nсостояние: Новое с бирками\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 60,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-4.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Новое с бирками",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-5",
+    "title": "Сумка через плечо Kodak Rope",
+    "description": "Винтажная двухцветная сумка Kodak с контрастным веревочным ремнем и фирменным логотипом\nцена: 45 BYN // 1350 RUB\nразмер: OS\nсостояние: Отличное\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 45,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-5.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Отличное",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-6",
+    "title": "Вельветовая сумка Carhartt Pouch",
+    "description": "Коричневая вельветовая сумка-мессенджер Carhartt с нашивкой логотипа\nцена: 45 BYN // 1350 RUB\nразмер: OS\nсостояние: Новое с бирками\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 45,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-6.webp"
+    ],
+    "era": "Архивный / New",
+    "condition": "Новое с бирками",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-7",
+    "title": "Сумка McDonald's Crossbody Pouch",
+    "description": "Компактная текстильная сумка McDonald's песочного цвета с золотыми арками и шнуровым ремнем\nцена: 35 BYN // 1050 RUB\nразмер: OS\nсостояние: Отличное\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 35,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-7.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Отличное",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-8",
+    "title": "Тактический слинг-рюкзак Oakley",
+    "description": "Техничный однолямочный слинг-рюкзак Oakley с металлическим логотипом и брелоком Zombie\nцена: 65 BYN // 1950 RUB\nразмер: OS\nсостояние: Отличное\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 65,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-8.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Отличное",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-9",
+    "title": "Сумка-полумесяц Black Crescent Hobo",
+    "description": "Минималистичная нейлоновая сумка-полумесяц в стиле Uniqlo / Lemaire, легкая и вместительная\nцена: 35 BYN // 1050 RUB\nразмер: OS\nсостояние: Отличное\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 35,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-9.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Отличное",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-10",
+    "title": "Сумка-бананка Leather Sling Bag",
+    "description": "Глянцевая черная сумка-слинг из плотной экокожи с регулируемым широким ремнем\nцена: 55 BYN // 1650 RUB\nразмер: OS\nсостояние: Новое с бирками\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 55,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-10.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Новое с бирками",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-11",
+    "title": "Рюкзак-роллтоп McDonald's Kraft",
+    "description": "Рюкзак с конструкцией ролл-топ из влагостойкого крафт-материала McDonald's\nцена: 45 BYN // 1350 RUB\nразмер: OS\nсостояние: Новое с бирками\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 45,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-11.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Новое с бирками",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-12",
+    "title": "Мини-сумка Patagonia Black Pouch (New!)",
+    "description": "Компактная сумка-органайзер Patagonia с двойными карманами на молниях и пуллерами из паракорда\nцена: 45 BYN // 1050 RUB\nразмер: OS\nсостояние: Новое с бирками\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 45,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-12.webp"
+    ],
+    "era": "Архивный / New",
+    "condition": "Новое с бирками",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-13",
+    "title": "Сумка-тоут Oakley Large Logo",
+    "description": "Вместительная черная сумка-тоут Oakley с акцентным белым эллиптическим логотипом\nцена: 45 BYN // 1350 RUB\nразмер: OS\nсостояние: Отличное\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 45,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-13.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Отличное",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-14",
+    "title": "Шоппер Slipknot Behind The Mask",
+    "description": "Черный хлопковый шоппер с культовой надписью метал-группы Slipknot Behind The Mask\nцена: 30 BYN // 900 RUB\nразмер: OS\nсостояние: Новое с бирками\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 30,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-14.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Новое с бирками",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-15",
+    "title": "Шоппер Led Zeppelin 1977 Tour (New!)",
+    "description": "Хлопковый шоппер с винтажным принтом тура Led Zeppelin United States of America 1977\nцена: 30 BYN // 900 RUB\nразмер: OS\nсостояние: Новое с бирками\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 30,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-15.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Новое с бирками",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-16",
+    "title": "Сумка-тубус Coca-Cola Classic Can",
+    "description": "Цилиндрическая винтажная сумка в форме банки Coca-Cola Classic с красным ремнем\nцена: 40 BYN // 1200 RUB\nразмер: OS\nсостояние: Отличное\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 40,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-16.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Отличное",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-17",
+    "title": "Сумка-мессенджер Patagonia Fitz Roy Fish (New!)",
+    "description": "Удобная плечевая сумка Patagonia с нашивкой Fitz Roy Fish и акцентными шнурами paracord\nцена: 45 BYN // 1350 RUB\nразмер: OS\nсостояние: Новое с бирками\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 45,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-17.webp"
+    ],
+    "era": "Архивный / New",
+    "condition": "Новое с бирками",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-18",
+    "title": "Шоппер Nirvana In Utero Angel (New!)",
+    "description": "Черный хлопковый шоппер с культовой анатомической фигурой альбома Nirvana In Utero\nцена: 30 BYN // 900 RUB\nразмер: OS\nсостояние: Новое с бирками\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 30,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-18.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Новое с бирками",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-19",
+    "title": "Рюкзак Oakley Tech Backpack Y2K",
+    "description": "Техничный черный рюкзак Oakley в стиле Y2K с массивными металлическими замками-молниями\nцена: 60 BYN // 1800 RUB\nразмер: OS\nсостояние: Отличное\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 60,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-19.webp"
+    ],
+    "era": "Винтаж / Y2K",
+    "condition": "Отличное",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
+    "id": "tg-drop2-20",
+    "title": "Сумка-слинг Patagonia White / Navy (New!)",
+    "description": "Светлая сумка-слинг Patagonia из рипстоп-нейлона с темно-синими сетчатыми карманами\nцена: 75 BYN // 2250 RUB\nразмер: OS\nсостояние: Новое с бирками\n\nПодпишись на наш тг: Lavkazombie",
+    "price": 75,
+    "currency": "BYN",
+    "category": "accessories",
+    "sizes": [
+      "ONE SIZE"
+    ],
+    "images": [
+      "/assets/products/tg-drop2-20.webp"
+    ],
+    "era": "Архивный / New",
+    "condition": "Новое с бирками",
+    "status": "published",
+    "inStock": true,
+    "featured": true
+  },
+  {
     "id": "tg-1",
     "title": "Сумка через плечо Adidas Puffer (New)",
     "description": "Сумка через плечо Adidas (NEW!) с оригинальными магазинными бирками\nцена: 80 BYN // 2400 RUB\nразмер: OS\nсостояние: Новое с бирками\n\nПодпишись на наш тг: Lavkazombie",
