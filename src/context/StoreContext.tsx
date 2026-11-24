@@ -273,6 +273,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
+  const [firestoreCustomProducts, setFirestoreCustomProducts] = useState<Product[]>([]);
   const [deployedCustomProducts, setDeployedCustomProducts] = useState<Product[]>([]);
 
   useEffect(() => {
@@ -314,6 +315,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (deletedArr.length > 0) {
           setDeletedIds((prev) => Array.from(new Set([...prev, ...deletedArr])));
         }
+
+        if (data.fields.heroSettings?.mapValue?.fields) {
+          const h = data.fields.heroSettings.mapValue.fields;
+          const hero: Partial<HeroSettings> = {};
+          if (h.badge?.stringValue) hero.badge = h.badge.stringValue;
+          if (h.title?.stringValue) hero.title = h.title.stringValue;
+          if (h.description?.stringValue) hero.description = h.description.stringValue;
+          if (h.bannerImage?.stringValue) hero.bannerImage = h.bannerImage.stringValue;
+          setHeroSettings((prev) => ({ ...prev, ...hero }));
+        }
+
+        if (data.fields.promoSettings?.mapValue?.fields) {
+          const p = data.fields.promoSettings.mapValue.fields;
+          const promo: Partial<PromoBannerSettings> = {};
+          if (p.enabled !== undefined) promo.enabled = p.enabled.booleanValue ?? true;
+          if (p.badge?.stringValue) promo.badge = p.badge.stringValue;
+          if (p.text?.stringValue) promo.text = p.text.stringValue;
+          if (p.linkText?.stringValue) promo.linkText = p.linkText.stringValue;
+          if (p.linkUrl?.stringValue) promo.linkUrl = p.linkUrl.stringValue;
+          setPromoSettings((prev) => ({ ...prev, ...promo }));
+        }
       })
       .catch((e) => console.warn('Immediate Firestore REST fetch fallback:', e));
 
@@ -350,6 +372,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 } catch {}
                 return merged;
               });
+            }
+            if (data.heroSettings && typeof data.heroSettings === 'object') {
+              setHeroSettings((prev) => ({ ...prev, ...data.heroSettings }));
+            }
+            if (data.promoSettings && typeof data.promoSettings === 'object') {
+              setPromoSettings((prev) => ({ ...prev, ...data.promoSettings }));
+            }
+            if (data.customProducts && typeof data.customProducts === 'object') {
+              const list = Object.values(data.customProducts) as Product[];
+              if (Array.isArray(list) && list.length > 0) {
+                setFirestoreCustomProducts(list);
+              }
             }
           }
         },
@@ -444,7 +478,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const updateHeroSettings = useCallback(
-    (settings: Partial<HeroSettings>) => {
+    async (settings: Partial<HeroSettings>) => {
       setHeroSettings((prev) => {
         const next = { ...prev, ...settings };
         try {
@@ -453,16 +487,46 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return next;
       });
       showToast('Настройки главной страницы сохранены');
+
+      try {
+        const hash = getAdminHash();
+        await setDoc(
+          doc(db, 'metadata', 'catalog_state'),
+          {
+            adminHash: hash,
+            heroSettings: settings,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.warn('Hero settings sync error:', err);
+      }
     },
     [showToast]
   );
 
-  const resetHeroSettings = useCallback(() => {
+  const resetHeroSettings = useCallback(async () => {
     setHeroSettings(DEFAULT_HERO_SETTINGS);
     try {
       window.localStorage.removeItem(LOCAL_HERO_KEY);
     } catch {}
     showToast('Настройки афиши сброшены по умолчанию');
+
+    try {
+      const hash = getAdminHash();
+      await setDoc(
+        doc(db, 'metadata', 'catalog_state'),
+        {
+          adminHash: hash,
+          heroSettings: DEFAULT_HERO_SETTINGS,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.warn('Hero reset sync error:', err);
+    }
   }, [showToast]);
 
   const [promoSettings, setPromoSettings] = useState<PromoBannerSettings>(() => {
@@ -499,7 +563,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const updatePromoSettings = useCallback(
-    (settings: Partial<PromoBannerSettings>) => {
+    async (settings: Partial<PromoBannerSettings>) => {
       setPromoSettings((prev) => {
         const next = { ...prev, ...settings };
         try {
@@ -508,16 +572,46 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return next;
       });
       showToast('Настройки промо-строки сохранены');
+
+      try {
+        const hash = getAdminHash();
+        await setDoc(
+          doc(db, 'metadata', 'catalog_state'),
+          {
+            adminHash: hash,
+            promoSettings: settings,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.warn('Promo settings sync error:', err);
+      }
     },
     [showToast]
   );
 
-  const resetPromoSettings = useCallback(() => {
+  const resetPromoSettings = useCallback(async () => {
     setPromoSettings(DEFAULT_PROMO_SETTINGS);
     try {
       window.localStorage.removeItem(LOCAL_PROMO_KEY);
     } catch {}
     showToast('Промо-строка сброшена по умолчанию');
+
+    try {
+      const hash = getAdminHash();
+      await setDoc(
+        doc(db, 'metadata', 'catalog_state'),
+        {
+          adminHash: hash,
+          promoSettings: DEFAULT_PROMO_SETTINGS,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.warn('Promo reset sync error:', err);
+    }
   }, [showToast]);
 
   const [interestStats, setInterestStats] = useState<
@@ -771,7 +865,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const products = useMemo(() => {
     const deletedSet = new Set(deletedIds);
-    const combined = [...customProducts, ...deployedCustomProducts, ...baseProducts];
+    const combined = [...customProducts, ...firestoreCustomProducts, ...deployedCustomProducts, ...baseProducts];
     const seen = new Set<string>();
 
     return combined
@@ -790,11 +884,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
         return item;
       });
-  }, [customProducts, deployedCustomProducts, baseProducts, deletedIds, productOverrides, stockOverrides]);
+  }, [customProducts, firestoreCustomProducts, deployedCustomProducts, baseProducts, deletedIds, productOverrides, stockOverrides]);
 
   const adminProducts = useMemo(() => {
     const deletedSet = new Set(deletedIds);
-    const combined = [...customProducts, ...deployedCustomProducts, ...baseAdminProducts];
+    const combined = [...customProducts, ...firestoreCustomProducts, ...deployedCustomProducts, ...baseAdminProducts];
     const seen = new Set<string>();
 
     return combined
@@ -813,7 +907,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
         return item;
       });
-  }, [customProducts, deployedCustomProducts, baseAdminProducts, deletedIds, productOverrides, stockOverrides]);
+  }, [customProducts, firestoreCustomProducts, deployedCustomProducts, baseAdminProducts, deletedIds, productOverrides, stockOverrides]);
 
   const validFittingCount = useMemo(() => {
     const productSet = new Set(products.map((p) => p.id));
@@ -1125,6 +1219,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return next;
       });
 
+      const newProduct: Product = {
+        id: productId,
+        title: basePayload.title,
+        description: basePayload.description,
+        price: basePayload.price,
+        currency: 'BYN',
+        category: basePayload.category,
+        sizes: basePayload.sizes,
+        images: basePayload.images,
+        era: basePayload.era,
+        condition: basePayload.condition,
+        measurements: basePayload.measurements,
+        status: basePayload.status,
+        inStock: basePayload.inStock,
+        featured: basePayload.featured,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
       // Global Real-time Firestore sync for ALL visitors
       try {
         const hash = getAdminHash();
@@ -1149,6 +1262,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 featured: basePayload.featured,
               },
             },
+            ...(!existingId
+              ? {
+                  customProducts: {
+                    [productId]: {
+                      id: productId,
+                      title: basePayload.title,
+                      description: basePayload.description,
+                      price: basePayload.price,
+                      currency: 'BYN' as const,
+                      category: basePayload.category,
+                      sizes: basePayload.sizes,
+                      images: basePayload.images,
+                      era: basePayload.era,
+                      condition: basePayload.condition,
+                      measurements: basePayload.measurements,
+                      status: basePayload.status,
+                      inStock: basePayload.inStock,
+                      featured: basePayload.featured,
+                    },
+                  },
+                }
+              : {}),
             updatedAt: serverTimestamp(),
           },
           { merge: true }
@@ -1156,25 +1291,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } catch (error) {
         console.warn('Firestore global product sync error:', error);
       }
-
-      const newProduct: Product = {
-        id: productId,
-        title: basePayload.title,
-        description: basePayload.description,
-        price: basePayload.price,
-        currency: 'BYN',
-        category: basePayload.category,
-        sizes: basePayload.sizes,
-        images: basePayload.images,
-        era: basePayload.era,
-        condition: basePayload.condition,
-        measurements: basePayload.measurements,
-        status: basePayload.status,
-        inStock: basePayload.inStock,
-        featured: basePayload.featured,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
 
       if (existingId) {
         setCustomProducts((prev) => {
