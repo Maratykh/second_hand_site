@@ -67,7 +67,7 @@ export const AdminProductFormModal: React.FC<AdminProductFormModalProps> = ({
         const rawData = ev.target?.result as string;
         const img = new Image();
         img.onload = () => {
-          const maxDim = 1200;
+          const maxDim = 900;
           let w = img.width;
           let h = img.height;
           if (w > maxDim || h > maxDim) {
@@ -85,7 +85,15 @@ export const AdminProductFormModal: React.FC<AdminProductFormModalProps> = ({
           const ctx = canvas.getContext('2d');
           if (ctx) {
             ctx.drawImage(img, 0, 0, w, h);
-            const compressed = canvas.toDataURL('image/jpeg', 0.85);
+            let compressed = '';
+            try {
+              compressed = canvas.toDataURL('image/webp', 0.82);
+              if (!compressed.startsWith('data:image/webp')) {
+                compressed = canvas.toDataURL('image/jpeg', 0.82);
+              }
+            } catch {
+              compressed = canvas.toDataURL('image/jpeg', 0.82);
+            }
             setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${compressed}` : compressed));
           } else {
             setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${rawData}` : rawData));

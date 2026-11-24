@@ -257,6 +257,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
+  const [deployedCustomProducts, setDeployedCustomProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/data/customProducts.json')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: Product[]) => {
+        if (!cancelled && Array.isArray(data) && data.length > 0) {
+          setDeployedCustomProducts(data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [asyncSeedProducts, setAsyncSeedProducts] = useState<Product[]>(SEED_PRODUCTS);
 
   useEffect(() => {
@@ -653,7 +670,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const products = useMemo(() => {
     const deletedSet = new Set(deletedIds);
-    const combined = [...customProducts, ...baseProducts];
+    const combined = [...customProducts, ...deployedCustomProducts, ...baseProducts];
     const seen = new Set<string>();
 
     return combined
@@ -672,11 +689,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
         return item;
       });
-  }, [customProducts, baseProducts, deletedIds, productOverrides, stockOverrides]);
+  }, [customProducts, deployedCustomProducts, baseProducts, deletedIds, productOverrides, stockOverrides]);
 
   const adminProducts = useMemo(() => {
     const deletedSet = new Set(deletedIds);
-    const combined = [...customProducts, ...baseAdminProducts];
+    const combined = [...customProducts, ...deployedCustomProducts, ...baseAdminProducts];
     const seen = new Set<string>();
 
     return combined
@@ -695,7 +712,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
         return item;
       });
-  }, [customProducts, baseAdminProducts, deletedIds, productOverrides, stockOverrides]);
+  }, [customProducts, deployedCustomProducts, baseAdminProducts, deletedIds, productOverrides, stockOverrides]);
 
   const validFittingCount = useMemo(() => {
     const productSet = new Set(products.map((p) => p.id));
@@ -1047,6 +1064,30 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           return next;
         });
       }
+
+      // Sync to Git-backed serverless endpoint for cross-device global persistence
+      fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newProduct.title,
+          price: newProduct.price,
+          category: newProduct.category,
+          sizes: newProduct.sizes,
+          description: newProduct.description,
+          measurements: newProduct.measurements,
+          inStock: newProduct.inStock,
+          status: newProduct.status,
+          imageBase64: cleanImages[0],
+        }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((res) => {
+          if (res?.persistedToGit) {
+            showToast('Вещь зафиксирована в проекте для всех устройств!');
+          }
+        })
+        .catch(() => {});
 
       const docRef = doc(db, 'products', productId);
       try {

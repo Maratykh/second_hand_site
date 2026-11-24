@@ -15,7 +15,7 @@ export const SEED_PRODUCTS: Product[] = [
       "ONE SIZE"
     ],
     "images": [
-      "https://sun9-80.vkuserphoto.ru/s/v1/ig2/T-cUaprXpIff-lZYZBK9_tKJEtsJSMr1i5urNhhn5Yl_z5gfzF-gvmgrQEAG-3eCs3zlhm0gepssoZgdFRN2YNAw.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350,1280x1600,1440x1800,2048x2560&from=bu&cs=1280x0"
+      "/assets/products/vk-1.webp"
     ],
     "era": "Винтаж / Y2K",
     "condition": "Отличное селективное",
@@ -34,7 +34,7 @@ export const SEED_PRODUCTS: Product[] = [
       "ONE SIZE"
     ],
     "images": [
-      "https://sun9-6.vkuserphoto.ru/s/v1/ig2/73N0g2wjJNHoKXXVzocqvpLjK58vchAfT4mbdoGCa7BjrZQuGAj7fRJw5LkjJyRnrmAY3DUgOlVKE7WrJ22um8Z7.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350,1280x1600,1440x1800,2048x2560&from=bu&cs=1280x0"
+      "/assets/products/vk-2.webp"
     ],
     "era": "Винтаж / Y2K",
     "condition": "Отличное селективное",
@@ -53,7 +53,7 @@ export const SEED_PRODUCTS: Product[] = [
       "ONE SIZE"
     ],
     "images": [
-      "https://sun9-63.vkuserphoto.ru/s/v1/ig2/e3Zwfe3a1tlpCeIKp_UtDRWwg2h5nR8_5kEAaFplJGQBmTyjPYntkFyVQblf3kCTI3VDLJ5ShC6v97-4HlpmqPeP.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350,1280x1600,1440x1800,2048x2560&from=bu&cs=1280x0"
+      "/assets/products/vk-3.webp"
     ],
     "era": "Винтаж / Y2K",
     "condition": "Отличное селективное",
@@ -72,7 +72,7 @@ export const SEED_PRODUCTS: Product[] = [
       "ONE SIZE"
     ],
     "images": [
-      "https://sun9-70.vkuserphoto.ru/s/v1/ig2/yRrSFCBuJ-fah0ZUjL6KWDt6k2fglPNsSpd3i2SPjyUbrDyul7dNT6cOeK2zwGSLBI67hKG8OEpxsELI0GF9fn4c.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350,1280x1600,1440x1800,2048x2560&from=bu&cs=1280x0"
+      "/assets/products/vk-4.webp"
     ],
     "era": "Винтаж / Y2K",
     "condition": "Отличное селективное",
@@ -91,7 +91,7 @@ export const SEED_PRODUCTS: Product[] = [
       "ONE SIZE"
     ],
     "images": [
-      "https://sun9-54.vkuserphoto.ru/s/v1/ig2/gyR3-Ij_1iCIcg1Zuz-D17HNx8M6lTAVlzLxxMEAQTVGtHuffnjzBUA6IXBlc3RcAZHXnXPcu8QP5O6nraHjzxKM.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350,1280x1600,1440x1800,2048x2560&from=bu&cs=1280x0"
+      "/assets/products/vk-5.webp"
     ],
     "era": "Винтаж / Y2K",
     "condition": "Отличное селективное",
@@ -110,7 +110,7 @@ export const SEED_PRODUCTS: Product[] = [
       "ONE SIZE"
     ],
     "images": [
-      "https://sun9-83.vkuserphoto.ru/s/v1/ig2/86sawhd4_AtPu4ZBmyhDWY5e1k0M_fXsg_O-57Ddyoj30RysA3WWfs0HKoGo3HjojGXMLC8eCsI7Z3PNBcb0B_LK.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350,1280x1600,1440x1800,2048x2560&from=bu&cs=1280x0"
+      "/assets/products/vk-6.webp"
     ],
     "era": "Винтаж / Y2K",
     "condition": "Отличное селективное",
@@ -129,7 +129,7 @@ export const SEED_PRODUCTS: Product[] = [
       "ONE SIZE"
     ],
     "images": [
-      "https://sun9-47.vkuserphoto.ru/s/v1/ig2/IAMHu3xKVmD-dUubvgUjpKcRrbU280fs_A8I6c5J99Q7GQ0zCcnhuXsbt6M6j-b-uhXfkfVSNO5yYZe-N-vAht2e.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350,1280x1600,1440x1800,2048x2560&from=bu&cs=1280x0"
+      "/assets/products/vk-7.webp"
     ],
     "era": "Винтаж / Y2K",
     "condition": "Отличное селективное",
@@ -148,7 +148,7 @@ export const SEED_PRODUCTS: Product[] = [
       "ONE SIZE"
     ],
     "images": [
-      "https://sun9-4.vkuserphoto.ru/s/v1/ig2/vr7tWjfIM0oHOqO-chnehF-yo_a9WxsUmk1rGKxS5DBoxSRjqcz2wfYXm_qd2Rz7S_SJByzi63-6--4rd-1W8FM-.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350,1280x1600,1440x1800,2048x2560&from=bu&cs=1280x0"
+      "/assets/products/vk-8.webp"
     ],
     "era": "Винтаж / Y2K",
     "condition": "Отличное селективное",
