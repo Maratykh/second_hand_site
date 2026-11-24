@@ -180,8 +180,8 @@ export const CATEGORY_SUBCATEGORIES: Record<ProductCategory, SubCategoryDef[]> =
     },
     {
       key: 'headwear',
-      label: 'Кепки & Шапки',
-      match: (t, d) => /шапк|кепк|кепи|панам|бейсболк|beanie|cap|hat/i.test(`${t} ${d}`),
+      label: 'Шапки, кепки & бафы',
+      match: (t, d) => /шапк|кепк|кепи|панам|бейсболк|баф|бафф|buff|снуд|шарф|перчатк|варежк|носки|повязк|beanie|cap|hat/i.test(`${t} ${d}`),
     },
     {
       key: 'jewelry_belts',

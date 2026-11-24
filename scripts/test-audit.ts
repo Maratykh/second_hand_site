@@ -189,6 +189,11 @@ const poloMatch = tshirtsSubs.find((s) => s.key === 'polo')?.match('Поло Fre
 assert(Boolean(maikaMatch), 'Подвкладка «Майки» корректно определяет майки');
 assert(Boolean(poloMatch), 'Подвкладка «Поло» корректно определяет поло');
 
+// Buff test
+const accessoriesSubs = CATEGORY_SUBCATEGORIES.accessories;
+const buffMatch = accessoriesSubs.find((s) => s.key === 'headwear')?.match('флисовый баф', 'аксессуар');
+assert(Boolean(buffMatch), 'Флисовый баф корректно относится к подвкладке аксессуаров');
+
 console.log('\n========================================');
 console.log(`Итоги аудита: Успешно пройдены ${passed} тестов из ${passed + failed}`);
 if (failed > 0) {
