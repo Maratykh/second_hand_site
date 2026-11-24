@@ -69,7 +69,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 </h1>
                 <p className="text-base text-zinc-400 leading-relaxed max-w-md">
                   {heroSettings?.description ||
-                    'Оригинальные вещи 80-х, 90-х и Y2K в единственном экземпляре. Европейский и американский селектив с еженедельными дропами.'}
+                    'Оригинальные вещи 80-х, 90-х и Y2K штучного селектива. Европейский и американский архив с еженедельными дропами.'}
                 </p>
               </div>
 
@@ -95,8 +95,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
 
                 <div className="pt-5 border-t border-zinc-800/80 grid grid-cols-2 gap-4 text-xs text-zinc-400">
                   <div>
-                    <p className="text-zinc-200 font-medium">В одном экземпляре</p>
-                    <p className="mt-0.5">Каждая вещь строго в одном размере</p>
+                    <p className="text-zinc-200 font-medium">Штучный селектив</p>
+                    <p className="mt-0.5">Большинство позиций в 1–2 экземплярах</p>
                   </div>
                   <div>
                     <p className="text-zinc-200 font-medium">Шоурум и отправка</p>

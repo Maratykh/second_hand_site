@@ -1044,7 +1044,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
                     {heroTitleInput || 'Селективный винтаж & архив'}
                   </h3>
                   <p className="text-xs text-zinc-400 leading-relaxed">
-                    {heroDescInput || 'Оригинальные вещи 80-х, 90-х и Y2K в единственном экземпляре.'}
+                    {heroDescInput || 'Оригинальные вещи 80-х, 90-х и Y2K штучного селектива.'}
                   </p>
                 </div>
 
@@ -1125,7 +1125,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
                   rows={2}
                   value={heroDescInput}
                   onChange={(e) => setHeroDescInput(e.target.value)}
-                  placeholder="Оригинальные вещи 80-х, 90-х и Y2K в единственном экземпляре..."
+                  placeholder="Оригинальные вещи 80-х, 90-х и Y2K штучного селектива..."
                   className="w-full bg-[#18181B] border border-zinc-700 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-[#A3E635]"
                 />
               </div>

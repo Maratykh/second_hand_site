@@ -19,7 +19,7 @@ export const CartPage: React.FC<CartPageProps> = ({ onNavigate }) => {
         <div className="max-w-lg mx-auto bg-[#111114] border border-zinc-800/80 p-10 text-center space-y-5">
           <h1 className="font-display text-3xl font-bold text-white uppercase">Корзина пуста</h1>
           <p className="text-sm text-zinc-400 leading-relaxed">
-            Добавьте понравившиеся винтажные вещи из каталога. Большинство позиций представлены в единственном экземпляре.
+            Добавьте понравившиеся винтажные вещи из каталога. Большинство позиций представлены в 1–2 экземплярах.
           </p>
           <button
             type="button"

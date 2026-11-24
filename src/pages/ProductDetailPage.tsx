@@ -266,9 +266,11 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           <div className="space-y-3">
             <div className="flex items-center justify-between text-xs gap-2">
               <span className="text-zinc-300 font-medium uppercase tracking-wider">
-                Доступный размер
+                {product.sizes.length > 1 ? 'Доступные размеры' : 'Доступный размер'}
               </span>
-              <span className="text-zinc-500 font-mono">В 1 экземпляре</span>
+              <span className="text-zinc-500 font-mono">
+                {product.sizes.length > 1 ? 'Лимитированный тираж' : 'В 1 экземпляре'}
+              </span>
             </div>
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Размер товара">
               {product.sizes.map((size) => {
