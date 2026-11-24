@@ -76,7 +76,7 @@ export function loadProductHdImageMap(): Promise<Record<string, string>> {
 /**
  * Preloads and decodes an image off-DOM with `no-referrer` before swapping it in UI.
  */
-export function preloadHdImage(url: string, timeoutMs: number = 12000): Promise<string> {
+export function preloadHdImage(url: string, timeoutMs: number = 30000): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.referrerPolicy = 'no-referrer';
