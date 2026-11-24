@@ -177,14 +177,28 @@ function isPermissionDeniedError(err: unknown): boolean {
 async function verifyHashViaRestProbe(inputHash: string): Promise<'ok' | 'denied' | 'network'> {
   try {
     const dbId = firebaseConfig.firestoreDatabaseId || '(default)';
-    const url = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${dbId}/documents/admin_auth/session?key=${encodeURIComponent(firebaseConfig.apiKey)}`;
+    const docName = `projects/${firebaseConfig.projectId}/databases/${dbId}/documents/admin_auth/session`;
+    const url = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${dbId}/documents:commit?key=${encodeURIComponent(firebaseConfig.apiKey)}`;
     const res = await fetch(url, {
-      method: 'PATCH',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        fields: {
-          hash: { stringValue: inputHash },
-        },
+        writes: [
+          {
+            update: {
+              name: docName,
+              fields: {
+                hash: { stringValue: inputHash },
+              },
+            },
+            updateTransforms: [
+              {
+                fieldPath: 'ts',
+                setToServerValue: 'REQUEST_TIME',
+              },
+            ],
+          },
+        ],
       }),
     });
     if (res.ok) return 'ok';

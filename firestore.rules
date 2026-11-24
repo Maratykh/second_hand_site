@@ -40,7 +40,8 @@ service cloud.firestore {
     }
 
     function isPasswordSessionProof() {
-      return getAfter(/databases/$(database)/documents/admin_auth/session).data.hash is string &&
+      return getAfter(/databases/$(database)/documents/admin_auth/session).data.ts == request.time &&
+        getAfter(/databases/$(database)/documents/admin_auth/session).data.hash is string &&
         getAfter(/databases/$(database)/documents/admin_auth/session).data.hash in
         get(/databases/$(database)/documents/admin_auth/credentials).data.activeHashes;
     }
@@ -179,8 +180,9 @@ service cloud.firestore {
 
     match /admin_auth/session {
       allow read: if false;
-      allow create, update: if incoming().keys().hasAll(['hash']) &&
+      allow create, update: if incoming().keys().hasAll(['hash', 'ts']) &&
         incoming().keys().hasOnly(['hash', 'ts']) &&
+        incoming().ts == request.time &&
         incoming().hash is string &&
         incoming().hash in get(/databases/$(database)/documents/admin_auth/credentials).data.activeHashes;
       allow delete: if false;
