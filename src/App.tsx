@@ -39,7 +39,10 @@ function parseHashToRoute(): AppRoute {
   }
   if (first === 'favorites') return { page: 'fittings', tab: 'favorites' };
   if (first === 'about') return { page: 'about' };
-  if (first === 'admin') return { page: 'admin' };
+  if (first === 'admin') {
+    const params = new URLSearchParams(queryPart || '');
+    return { page: 'admin', editProductId: params.get('edit') || undefined };
+  }
   return { page: 'home' };
 }
 
@@ -61,8 +64,12 @@ function routeToHash(route: AppRoute): string {
       return route.tab === 'favorites' ? '#/fittings?tab=favorites' : '#/fittings';
     case 'about':
       return '#/about';
-    case 'admin':
+    case 'admin': {
+      if (route.editProductId) {
+        return `#/admin?edit=${encodeURIComponent(route.editProductId)}`;
+      }
       return '#/admin';
+    }
     case 'cart':
     case 'checkout':
       return '#/fittings';
@@ -124,7 +131,12 @@ const AppShell: React.FC = () => {
           />
         )}
         {route.page === 'about' && <AboutPage />}
-        {route.page === 'admin' && <AdminPage />}
+        {route.page === 'admin' && (
+          <AdminPage
+            editProductId={route.editProductId}
+            onNavigate={navigate}
+          />
+        )}
       </main>
 
       <Footer onNavigate={navigate} />

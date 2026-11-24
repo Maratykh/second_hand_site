@@ -39,12 +39,19 @@ import { downloadProductPhoto } from '../utils/downloadImage';
 import { formatPriceBYN } from '../utils/storeLogic';
 import { SafeImage } from '../components/SafeImage';
 import { AdminProductFormModal } from '../components/admin/AdminProductFormModal';
+import { AdminProductEditPage } from '../components/admin/AdminProductEditPage';
 import { getLockoutStatus } from '../utils/adminAuth';
+import type { AppRoute } from '../components/Header';
 
 type AdminTab = 'inventory' | 'analytics' | 'hero' | 'settings';
 type StockFilter = 'all' | 'in_stock' | 'sold';
 
-export const AdminPage: React.FC = () => {
+interface AdminPageProps {
+  editProductId?: string;
+  onNavigate?: (route: AppRoute) => void;
+}
+
+export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate }) => {
   const {
     isAdmin,
     loginAdminWithPassword,
@@ -469,6 +476,23 @@ export const AdminPage: React.FC = () => {
     );
   }
 
+  // Dedicated full-page product settings / editor view
+  if (editProductId) {
+    return (
+      <AdminProductEditPage
+        productId={editProductId}
+        onNavigate={onNavigate}
+        onBack={() => {
+          if (onNavigate) {
+            onNavigate({ page: 'admin' });
+          } else {
+            window.location.hash = '#/admin';
+          }
+        }}
+      />
+    );
+  }
+
   // Authenticated Admin Dashboard
   return (
     <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -651,8 +675,11 @@ export const AdminPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setEditingProduct(null);
-                  setShowProductModal(true);
+                  if (onNavigate) {
+                    onNavigate({ page: 'admin', editProductId: 'new' });
+                  } else {
+                    window.location.hash = '#/admin?edit=new';
+                  }
                 }}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[42px] bg-[#A3E635] text-[#09090B] text-xs font-bold uppercase tracking-wider hover:bg-lime-300 transition-colors cursor-pointer shrink-0 shadow-lg shadow-lime-950/40"
               >
@@ -761,8 +788,11 @@ export const AdminPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => {
-                              setEditingProduct(product);
-                              setShowProductModal(true);
+                              if (onNavigate) {
+                                onNavigate({ page: 'admin', editProductId: product.id });
+                              } else {
+                                window.location.hash = `#/admin?edit=${product.id}`;
+                              }
                             }}
                             title="Редактировать вещь"
                             className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"

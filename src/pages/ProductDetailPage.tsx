@@ -23,7 +23,6 @@ import type { ProductSize } from '../types/store';
 import { BRAND_INFO, CATEGORY_LABELS } from '../types/store';
 import { formatMeasurementValue, formatPriceBYN } from '../utils/storeLogic';
 import { SafeImage } from '../components/SafeImage';
-import { AdminProductFormModal } from '../components/admin/AdminProductFormModal';
 import type { AppRoute } from '../components/Header';
 
 interface ProductDetailPageProps {
@@ -42,7 +41,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [selectedSize, setSelectedSize] = useState<ProductSize | null>(null);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     setSelectedImageIdx(0);
@@ -233,11 +231,11 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsEditing(true)}
+                  onClick={() => onNavigate({ page: 'admin', editProductId: product.id })}
                   className="py-2.5 px-4 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-[#A3E635] text-white text-xs font-mono font-semibold inline-flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <Edit3 className="w-4 h-4 text-[#A3E635]" />
-                  <span>Редактировать товар</span>
+                  <span>Настройки товара</span>
                 </button>
 
                 <button
@@ -502,14 +500,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             </div>
           )}
         </div>
-      )}
-
-      {/* In-Page Admin Edit Modal */}
-      {isAdmin && isEditing && (
-        <AdminProductFormModal
-          initialProduct={product}
-          onClose={() => setIsEditing(false)}
-        />
       )}
     </div>
   );

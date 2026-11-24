@@ -11,7 +11,7 @@ export type AppRoute =
   | { page: 'about' }
   | { page: 'cart' }
   | { page: 'checkout' }
-  | { page: 'admin' };
+  | { page: 'admin'; editProductId?: string };
 
 interface HeaderProps {
   currentPage: AppRoute['page'];

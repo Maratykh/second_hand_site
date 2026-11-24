@@ -6,7 +6,6 @@ import { BRAND_INFO, CATEGORY_LABELS } from '../types/store';
 import { formatPriceBYN } from '../utils/storeLogic';
 import { SafeImage } from './SafeImage';
 import { ScrollReveal } from './ScrollReveal';
-import { AdminProductFormModal } from './admin/AdminProductFormModal';
 
 interface ProductCardProps {
   product: Product;
@@ -18,7 +17,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, ind
   const { fittingIds, toggleFitting, wishlistIds, toggleWishlist, isAdmin, setProductInStock, deleteProduct } =
     useStore();
 
-  const [isEditing, setIsEditing] = useState(false);
   const isFitting = fittingIds.includes(product.id);
   const isWishlisted = wishlistIds.includes(product.id);
   const displayTitle = product.title.trim() || 'Винтажная позиция';
@@ -177,19 +175,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, ind
             {/* In-Catalog Admin Controls */}
             {isAdmin && (
               <div className="pt-2.5 mt-1 border-t border-dashed border-[#A3E635]/40 flex items-center gap-1.5 bg-[#A3E635]/5 -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 p-2.5">
-                <button
-                  type="button"
+                <a
+                  href={`#/admin?edit=${encodeURIComponent(product.id)}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    e.preventDefault();
-                    setIsEditing(true);
                   }}
                   className="flex-1 py-1.5 px-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-[#A3E635] text-white text-[11px] font-mono font-medium inline-flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                  title="Редактировать товар (цена, замеры, размеры, фото)"
+                  title="Открыть страницу настроек товара"
                 >
                   <Edit3 className="w-3 h-3 text-[#A3E635]" />
                   <span>Настройки</span>
-                </button>
+                </a>
 
                 <button
                   type="button"
@@ -216,14 +212,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, ind
             )}
           </div>
         </div>
-
-        {/* In-Catalog Admin Edit Modal */}
-        {isEditing && (
-          <AdminProductFormModal
-            initialProduct={product}
-            onClose={() => setIsEditing(false)}
-          />
-        )}
       </article>
     </ScrollReveal>
   );
