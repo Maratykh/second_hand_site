@@ -268,26 +268,26 @@ export const FittingsPage: React.FC<FittingsPageProps> = ({
                       {product.inStock ? (
                         <a
                           href={`${BRAND_INFO.supportUrl}?text=${encodeURIComponent(
-                            `Привет, Никита! Хочу заказать из списка примерок: ${product.title} (${defaultSize}, ${product.price} BYN).\nТовар: https://second-hand-sitea.vercel.app/#/product/${product.id}`
+                            `Привет! Хочу заказать из списка примерок: ${product.title} (${defaultSize}, ${product.price} BYN).\nТовар: https://lavkazombie.vercel.app/#/product/${product.id}`
                           )}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 px-4 py-2 min-h-[40px] bg-[#A3E635] text-[#09090B] text-xs font-bold hover:bg-lime-300 transition-colors cursor-pointer"
                         >
                           <MessageCircle className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
-                          <span>Заказать у Никиты 🛹</span>
+                          <span>Заказать</span>
                         </a>
                       ) : (
                         <a
                           href={`${BRAND_INFO.supportUrl}?text=${encodeURIComponent(
-                            `Привет, Никита! Интересует похожая вещь (в примерках отмечена как проданная): ${product.title} (была за ${product.price} BYN). Есть ли что-то похожее в шоуруме?\nТовар: https://second-hand-sitea.vercel.app/#/product/${product.id}`
+                            `Привет! Интересует похожая вещь (в примерках отмечена как проданная): ${product.title} (была за ${product.price} BYN). Есть ли что-то похожее в шоуруме?\nТовар: https://lavkazombie.vercel.app/#/product/${product.id}`
                           )}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 px-4 py-2 min-h-[40px] bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white text-xs font-medium transition-colors cursor-pointer"
                         >
                           <MessageCircle className="w-3.5 h-3.5" aria-hidden="true" />
-                          <span>Уточнить у Никиты</span>
+                          <span>Уточнить наличие</span>
                         </a>
                       )}
 
@@ -409,19 +409,19 @@ export const FittingsPage: React.FC<FittingsPageProps> = ({
                         {product.inStock ? (
                           <a
                             href={`${BRAND_INFO.supportUrl}?text=${encodeURIComponent(
-                              `Привет, Никита! Хочу заказать из избранного: ${product.title} (${defaultSize}, ${product.price} BYN).\nТовар: https://second-hand-sitea.vercel.app/#/product/${product.id}`
+                              `Привет! Хочу заказать из избранного: ${product.title} (${defaultSize}, ${product.price} BYN).\nТовар: https://lavkazombie.vercel.app/#/product/${product.id}`
                             )}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] bg-[#A3E635] text-[#09090B] text-xs font-bold hover:bg-lime-300 transition-colors cursor-pointer"
                           >
                             <MessageCircle className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
-                            <span>Заказать 🛹</span>
+                            <span>Заказать</span>
                           </a>
                         ) : (
                           <a
                             href={`${BRAND_INFO.supportUrl}?text=${encodeURIComponent(
-                              `Привет, Никита! Интересует похожая вещь на эту (продана): ${product.title} (${product.price} BYN).\nТовар: https://second-hand-sitea.vercel.app/#/product/${product.id}`
+                              `Привет! Интересует похожая вещь на эту (продана): ${product.title} (${product.price} BYN).\nТовар: https://lavkazombie.vercel.app/#/product/${product.id}`
                             )}`}
                             target="_blank"
                             rel="noopener noreferrer"

@@ -92,15 +92,15 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   ].filter((row) => row.value.length > 0);
 
   const orderTelegramUrl = `${BRAND_INFO.supportUrl}?text=${encodeURIComponent(
-    `Привет, Никита! Хочу заказать эту вещь:
+    `Привет! Хочу заказать эту вещь:
 📦 ${product.title}
 📏 Размер: ${selectedSize || product.sizes.join(', ') || 'ONE SIZE'}
 💰 Цена: ${product.price} BYN
-🔗 Ссылка: https://second-hand-sitea.vercel.app/#/product/${product.id}`
+🔗 Ссылка: https://lavkazombie.vercel.app/#/product/${product.id}`
   )}`;
 
   const askSimilarUrl = `${BRAND_INFO.supportUrl}?text=${encodeURIComponent(
-    `Привет, Никита! Интересует похожая вещь на эту (уже продана): ${product.title} (была за ${product.price} BYN). Есть ли что-то похожее в шоуруме или в новых дропах?`
+    `Привет! Интересует похожая вещь на эту (уже продана): ${product.title} (была за ${product.price} BYN). Есть ли что-то похожее в шоуруме или в новых дропах?`
   )}`;
 
   return (
@@ -271,7 +271,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 className="neon-btn w-full py-4 px-6 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2.5 bg-[#A3E635] text-[#09090B] hover:bg-lime-300 transition-colors cursor-pointer shadow-md"
               >
                 <MessageCircle className="w-5 h-5 fill-current" aria-hidden="true" />
-                <span>Заказать у Никиты @NikitaZombie 🛹</span>
+                <span>Заказать в Telegram</span>
               </a>
             ) : (
               <div className="space-y-2">
@@ -286,7 +286,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   className="w-full py-2.5 px-4 bg-transparent border border-zinc-700 text-zinc-300 hover:text-white text-xs font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <MessageCircle className="w-3.5 h-3.5" />
-                  <span>Спросить у Никиты похожую вещь в Telegram</span>
+                  <span>Спросить наличие похожей вещи</span>
                 </a>
               </div>
             )}

@@ -23,7 +23,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, ind
   const delayMs = Math.min((index % 4) * 65, 195);
 
   const orderTelegramUrl = `${BRAND_INFO.supportUrl}?text=${encodeURIComponent(
-    `Привет, Никита! Хочу заказать: ${displayTitle} (${product.sizes.join(', ') || 'размер не указан'}, ${product.price} BYN).\nТовар: https://second-hand-sitea.vercel.app/#/product/${product.id}`
+    `Привет! Хочу заказать: ${displayTitle} (${product.sizes.join(', ') || 'размер не указан'}, ${product.price} BYN).\nТовар: https://lavkazombie.vercel.app/#/product/${product.id}`
   )}`;
 
   const handleToggleStock = async (e: React.MouseEvent) => {
@@ -132,19 +132,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, ind
                 className="w-full min-h-[38px] px-3 py-2 bg-[#A3E635] text-[#09090B] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:bg-lime-300 transition-colors uppercase tracking-wider cursor-pointer"
               >
                 <MessageCircle className="w-3.5 h-3.5 fill-current" />
-                <span>Заказать у Никиты 🛹</span>
+                <span>Заказать</span>
               </a>
             ) : (
               <a
                 href={`${BRAND_INFO.supportUrl}?text=${encodeURIComponent(
-                  `Привет, Никита! Интересует похожая вещь на эту (уже продана): ${displayTitle} (${product.price} BYN). Есть ли похожее в шоуруме?\nТовар: https://second-hand-sitea.vercel.app/#/product/${product.id}`
+                  `Привет! Интересует похожая вещь на эту (уже продана): ${displayTitle} (${product.price} BYN). Есть ли похожее в шоуруме?\nТовар: https://lavkazombie.vercel.app/#/product/${product.id}`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full min-h-[38px] px-3 py-2 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white text-xs font-mono font-medium inline-flex items-center justify-center gap-1.5 uppercase transition-colors"
               >
                 <MessageCircle className="w-3.5 h-3.5" />
-                <span>Спросить у Никиты</span>
+                <span>Спросить наличие</span>
               </a>
             )}
 
