@@ -15,22 +15,22 @@ interface HomePageProps {
 const HOW_TO_ORDER_STEPS = [
   {
     number: '01.',
-    title: 'Выбрать вещь',
+    title: 'Выбрать в каталоге',
     description:
-      'Найдите нужную позицию в каталоге, изучите замеры или добавьте её в список «Хочу померить» перед визитом в шоурум.',
+      'Изучите замеры и состояние вещи в карточке. Добавляйте в список «Примерки» перед визитом в шоурум.',
     icon: SearchCheck,
   },
   {
     number: '02.',
-    title: 'Заказать у Никиты 🛹',
-    description: `Нажмите «Заказать у Никиты» на странице нужного товара — откроется диалог в Telegram с ${BRAND_INFO.supportHandle} с готовым сообщением, ценой и ссылкой.`,
+    title: 'Написать в Telegram',
+    description: `Кнопка «Купить» на странице товара сразу открывает диалог с ${BRAND_INFO.supportHandle} с готовой ссылкой и бронью вещи.`,
     icon: MessageCircle,
   },
   {
     number: '03.',
-    title: 'Получить почтой',
+    title: 'Шоурум или доставка',
     description:
-      'Отправляем Европочтой и Белпочтой по всей Беларуси, СДЭКом в Россию, либо ждём вас на примерку в Минске.',
+      'Забирайте с примеркой в Минске либо отправим Европочтой и Белпочтой по Беларуси, СДЭКом — в Россию.',
     icon: PackageCheck,
   },
 ];
@@ -65,11 +65,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                   {heroSettings?.badge || 'Минск · ул. Веры Хоружей 3, оф. 308'}
                 </p>
                 <h1 className="font-display text-[clamp(2.25rem,4vw,3.6rem)] font-bold leading-[1.12] tracking-tight text-white uppercase">
-                  {heroSettings?.title || 'Селективный винтаж без лишней наценки'}
+                  {heroSettings?.title || 'Селективный винтаж & архив'}
                 </h1>
                 <p className="text-base text-zinc-400 leading-relaxed max-w-md">
                   {heroSettings?.description ||
-                    `${BRAND_INFO.tagline} Архивная кожа, тяжёлый хлопок 90-х и честный деним — в одном экземпляре.`}
+                    'Оригинальные вещи 80-х, 90-х и Y2K в единственном экземпляре. Европейский и американский селектив с еженедельными дропами.'}
                 </p>
               </div>
 
@@ -89,18 +89,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                     rel="noopener noreferrer"
                     className="neon-outline-btn px-5 py-3.5 min-h-[44px] inline-flex items-center border border-zinc-700 text-zinc-200 text-sm font-medium transition-colors"
                   >
-                    Анонсы дропов в Telegram
+                    Telegram-канал
                   </a>
                 </div>
 
                 <div className="pt-5 border-t border-zinc-800/80 grid grid-cols-2 gap-4 text-xs text-zinc-400">
                   <div>
-                    <p className="text-zinc-200 font-medium">Еженедельные дропы</p>
-                    <p className="mt-0.5">Свежий винтаж и альбомы VK</p>
+                    <p className="text-zinc-200 font-medium">В одном экземпляре</p>
+                    <p className="mt-0.5">Каждая вещь строго в одном размере</p>
                   </div>
                   <div>
-                    <p className="text-zinc-200 font-medium">Доставка РБ и РФ</p>
-                    <p className="mt-0.5">Почта, Европочта и СДЭК</p>
+                    <p className="text-zinc-200 font-medium">Шоурум и отправка</p>
+                    <p className="mt-0.5">Примерка в Минске · Доставка РБ и РФ</p>
                   </div>
                 </div>
               </div>
@@ -133,7 +133,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
       <section className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-zinc-800/80 pb-5">
           <div>
-            <p className="text-xs text-zinc-500 tracking-[0.08em] uppercase">Свежее поступление</p>
+            <p className="text-xs text-zinc-500 tracking-[0.08em] uppercase">Свежий дроп</p>
             <h2 className="font-display text-3xl sm:text-4xl font-bold text-white uppercase tracking-tight mt-1">
               Новые поступления
             </h2>
@@ -174,9 +174,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         <div className="space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
-              <p className="text-xs text-zinc-500 tracking-[0.08em] uppercase">Простой процесс</p>
+              <p className="text-xs text-zinc-500 tracking-[0.08em] uppercase">Покупка и примерка</p>
               <h2 className="font-display text-3xl font-bold text-white uppercase tracking-tight mt-1">
-                Как заказать
+                Как забрать вещь
               </h2>
             </div>
             <a
@@ -219,13 +219,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         <div className="vintage-panel p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
             <p className="text-xs text-zinc-500 tracking-[0.08em] uppercase">
-              Проверенные покупки · РБ и РФ
+              Фидбек и отчеты
             </p>
             <h2 className="font-display text-2xl sm:text-3xl font-bold text-white uppercase">
-              Отзывы покупателей
+              Отзывы и посылки
             </h2>
             <p className="text-sm text-zinc-400 leading-relaxed">
-              Реальные фото посылок, отзывы о качестве вещей и чеки отправок Европочтой, Белпочтой и СДЭКом собраны в нашем альбоме ВКонтакте.
+              Сотни живых фото распаковок, отзывы о вещах и квитанции отправок от покупателей из Беларуси и России собраны в альбоме ВКонтакте.
             </p>
           </div>
 
@@ -236,7 +236,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
               rel="noopener noreferrer"
               className="neon-btn inline-flex items-center gap-2 px-6 py-3.5 min-h-[44px] bg-[#A3E635] text-[#09090B] text-sm font-bold hover:bg-lime-300 transition-colors whitespace-nowrap"
             >
-              <span>Смотреть отзывы в VK</span>
+              <span>Альбом с отзывами</span>
               <ExternalLink className="w-4 h-4" aria-hidden="true" />
             </a>
             <a
@@ -294,12 +294,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
 
           <div className="lg:col-span-5 bg-[#111114] border border-zinc-800/80 p-7 sm:p-8 flex flex-col justify-between gap-8">
             <div className="space-y-4">
-              <p className="text-xs text-zinc-500 tracking-[0.08em] uppercase">Офлайн-точка и отправка</p>
+              <p className="text-xs text-zinc-500 tracking-[0.08em] uppercase">Шоурум в центре Минска</p>
               <h2 className="font-display text-2xl sm:text-3xl font-bold text-white uppercase">
-                Заходите на примерку в Минске
+                Приходите на примерку
               </h2>
               <p className="text-sm text-zinc-400 leading-relaxed">
-                Каждую неделю разбираем новые поставки винтажа из Европы и США. Отмечайте понравившиеся вещи кнопкой «Померить» и приходите в шоурум.
+                Все вещи из каталога висят в нашем шоуруме на Веры Хоружей. Можно примерить вживую, оценить состояние и забрать на месте.
               </p>
             </div>
 

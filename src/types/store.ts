@@ -105,7 +105,7 @@ export const DEFAULT_PROMO_SETTINGS: PromoBannerSettings = {
 export const BRAND_INFO = {
   name: 'Лавка Зомби',
   latinName: 'Lavka Zombie',
-  tagline: 'Селективный магазин винтажной одежды по доступным ценам. Еженедельные большие обновления!',
+  tagline: 'Селективный архив винтажной одежды и стритвира в Минске. Еженедельные дропы.',
   address: 'г. Минск, ул. Веры Хоружей 3, офис 308',
   hoursWeekdays: 'Пн–Пт: 11:00 – 20:00',
   hoursWeekend: 'Сб–Вс: 11:00 – 19:00',

@@ -1011,10 +1011,10 @@ export const AdminPage: React.FC = () => {
                     {heroBadgeInput || 'Минск · ул. Веры Хоружей 3, оф. 308'}
                   </p>
                   <h3 className="font-display text-2xl sm:text-3xl font-bold text-white uppercase leading-tight">
-                    {heroTitleInput || 'Селективный винтаж без лишней наценки'}
+                    {heroTitleInput || 'Селективный винтаж & архив'}
                   </h3>
                   <p className="text-xs text-zinc-400 leading-relaxed">
-                    {heroDescInput || 'Архивная кожа, тяжёлый хлопок 90-х и честный деним — в одном экземпляре.'}
+                    {heroDescInput || 'Оригинальные вещи 80-х, 90-х и Y2K в единственном экземпляре.'}
                   </p>
                 </div>
 
@@ -1081,7 +1081,7 @@ export const AdminPage: React.FC = () => {
                     type="text"
                     value={heroTitleInput}
                     onChange={(e) => setHeroTitleInput(e.target.value)}
-                    placeholder="Селективный винтаж без лишней наценки"
+                    placeholder="Селективный винтаж & архив"
                     className="w-full bg-[#18181B] border border-zinc-700 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-[#A3E635]"
                   />
                 </div>
@@ -1095,7 +1095,7 @@ export const AdminPage: React.FC = () => {
                   rows={2}
                   value={heroDescInput}
                   onChange={(e) => setHeroDescInput(e.target.value)}
-                  placeholder="Селективный магазин винтажной одежды по доступным ценам..."
+                  placeholder="Оригинальные вещи 80-х, 90-х и Y2K в единственном экземпляре..."
                   className="w-full bg-[#18181B] border border-zinc-700 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-[#A3E635]"
                 />
               </div>
