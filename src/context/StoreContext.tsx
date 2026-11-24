@@ -292,6 +292,31 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Cross-device Realtime Sync via Firestore for ALL visitors
   useEffect(() => {
+    // Immediate HTTP fetch on load
+    const fsUrl = 'https://firestore.googleapis.com/v1/projects/fundamental-inverter-l91ww/databases/ai-studio-remixremix-521d0fff-033e-415a-8e15-0c73d96d03e5/documents/metadata/catalog_state?key=AIzaSyBosVDYGZUauLmHZna4Jw9Yo7TjAeEznuw';
+    fetch(fsUrl)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data || !data.fields) return;
+        const rawStock = data.fields.stockOverrides?.mapValue?.fields || {};
+        const stockMap: Record<string, boolean> = {};
+        for (const [k, v] of Object.entries(rawStock)) {
+          stockMap[k] = (v as { booleanValue?: boolean }).booleanValue ?? false;
+        }
+        if (Object.keys(stockMap).length > 0) {
+          setStockOverrides((prev) => ({ ...prev, ...stockMap }));
+        }
+
+        const rawDeleted = data.fields.deletedIds?.arrayValue?.values || [];
+        const deletedArr: string[] = rawDeleted
+          .map((v: { stringValue?: string }) => v.stringValue)
+          .filter(Boolean);
+        if (deletedArr.length > 0) {
+          setDeletedIds((prev) => Array.from(new Set([...prev, ...deletedArr])));
+        }
+      })
+      .catch((e) => console.warn('Immediate Firestore REST fetch fallback:', e));
+
     try {
       const docRef = doc(db, 'metadata', 'catalog_state');
       const unsub = onSnapshot(
@@ -1280,7 +1305,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           { merge: true }
         );
       } catch (error) {
-        console.warn('Firestore global stock sync error:', error);
+        console.warn('Firestore SDK sync error, trying REST fallback:', error);
+        try {
+          const fsUrl = `https://firestore.googleapis.com/v1/projects/fundamental-inverter-l91ww/databases/ai-studio-remixremix-521d0fff-033e-415a-8e15-0c73d96d03e5/documents/metadata/catalog_state?key=AIzaSyBosVDYGZUauLmHZna4Jw9Yo7TjAeEznuw&updateMask.fieldPaths=stockOverrides.${productId}&updateMask.fieldPaths=adminHash`;
+          await fetch(fsUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fields: {
+                adminHash: { stringValue: getAdminHash() },
+                stockOverrides: { mapValue: { fields: { [productId]: { booleanValue: inStock } } } },
+              },
+            }),
+          });
+        } catch {}
       }
     },
     [showToast]
