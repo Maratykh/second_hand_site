@@ -18,6 +18,7 @@ import {
   updateDoc,
   where,
   writeBatch,
+  arrayUnion,
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { auth, db, googleProvider, handleFirestoreError, OperationType, storage } from '../lib/firebase';
@@ -51,6 +52,7 @@ import {
   clearAdminSession,
   verifyAdminCredentials,
   changeAdminPassword as changeAdminPassUtil,
+  getAdminHash,
 } from '../utils/adminAuth';
 
 const LOCAL_CART_KEY = 'lavka_zombie_cart_v1';
@@ -286,6 +288,54 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Cross-device Realtime Sync via Firestore for ALL visitors
+  useEffect(() => {
+    try {
+      const docRef = doc(db, 'metadata', 'catalog_state');
+      const unsub = onSnapshot(
+        docRef,
+        (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            if (data.stockOverrides && typeof data.stockOverrides === 'object') {
+              setStockOverrides((prev) => {
+                const merged = { ...prev, ...data.stockOverrides };
+                try {
+                  window.localStorage.setItem(LOCAL_STOCK_OVERRIDES_KEY, JSON.stringify(merged));
+                } catch {}
+                return merged;
+              });
+            }
+            if (Array.isArray(data.deletedIds)) {
+              setDeletedIds((prev) => {
+                const merged = Array.from(new Set([...prev, ...data.deletedIds]));
+                try {
+                  window.localStorage.setItem(LOCAL_DELETED_KEY, JSON.stringify(merged));
+                } catch {}
+                return merged;
+              });
+            }
+            if (data.productOverrides && typeof data.productOverrides === 'object') {
+              setProductOverrides((prev) => {
+                const merged = { ...prev, ...data.productOverrides };
+                try {
+                  window.localStorage.setItem(LOCAL_OVERRIDES_KEY, JSON.stringify(merged));
+                } catch {}
+                return merged;
+              });
+            }
+          }
+        },
+        (err) => {
+          console.warn('Realtime catalog_state sync warning:', err);
+        }
+      );
+      return () => unsub();
+    } catch (e) {
+      console.warn('Realtime sync setup error:', e);
+    }
   }, []);
 
   const [asyncSeedProducts, setAsyncSeedProducts] = useState<Product[]>(SEED_PRODUCTS);
@@ -1050,6 +1100,38 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return next;
       });
 
+      // Global Real-time Firestore sync for ALL visitors
+      try {
+        const hash = getAdminHash();
+        await setDoc(
+          doc(db, 'metadata', 'catalog_state'),
+          {
+            adminHash: hash,
+            productOverrides: {
+              [productId]: {
+                title: basePayload.title,
+                description: basePayload.description,
+                price: basePayload.price,
+                currency: basePayload.currency,
+                category: basePayload.category,
+                sizes: basePayload.sizes,
+                images: basePayload.images,
+                era: basePayload.era,
+                condition: basePayload.condition,
+                measurements: basePayload.measurements,
+                status: basePayload.status,
+                inStock: basePayload.inStock,
+                featured: basePayload.featured,
+              },
+            },
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch (error) {
+        console.warn('Firestore global product sync error:', error);
+      }
+
       const newProduct: Product = {
         id: productId,
         title: basePayload.title,
@@ -1183,14 +1265,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         inStock ? 'Товар отмечен: «В наличии»' : 'Товар отмечен: «ПРОДАНО»'
       );
 
-      // 2. Best-effort Firestore update in background
+      // 2. Global Real-time Firestore sync for ALL visitors & devices
       try {
-        await updateDoc(doc(db, 'products', productId), {
-          inStock,
-          updatedAt: serverTimestamp(),
-        });
+        const hash = getAdminHash();
+        await setDoc(
+          doc(db, 'metadata', 'catalog_state'),
+          {
+            adminHash: hash,
+            stockOverrides: {
+              [productId]: inStock,
+            },
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
       } catch (error) {
-        console.warn('Firestore stock sync offline fallback:', error);
+        console.warn('Firestore global stock sync error:', error);
       }
     },
     [showToast]
@@ -1215,10 +1305,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
       showToast('Товар удалён из каталога');
 
+      // Global Real-time Firestore sync for ALL visitors
       try {
-        await deleteDoc(doc(db, 'products', productId));
+        const hash = getAdminHash();
+        await setDoc(
+          doc(db, 'metadata', 'catalog_state'),
+          {
+            adminHash: hash,
+            deletedIds: arrayUnion(productId),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
       } catch (error) {
-        console.warn('Firestore delete offline fallback:', error);
+        console.warn('Firestore global delete sync error:', error);
       }
     },
     [showToast]

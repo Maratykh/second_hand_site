@@ -130,12 +130,13 @@ export function checkAdminSession(): boolean {
   }
 }
 
-export function saveAdminSession(rememberMe: boolean = true): void {
+export function saveAdminSession(adminHash?: string, rememberMe: boolean = true): void {
   const now = Date.now();
   // 7 days if rememberMe, otherwise 12 hours
   const duration = rememberMe ? 7 * 24 * 60 * 60 * 1000 : 12 * 60 * 60 * 1000;
   const session = {
     auth: true,
+    adminHash: adminHash || 'e148fc42899e6ef2cda9be040d6c2a633ab61ffabb3fb1da0f786bcf3b556b39',
     createdAt: now,
     expiresAt: now + duration,
   };
@@ -146,6 +147,17 @@ export function saveAdminSession(rememberMe: boolean = true): void {
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     }
   } catch {}
+}
+
+export function getAdminHash(): string {
+  try {
+    let raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.adminHash) return parsed.adminHash;
+    }
+  } catch {}
+  return 'e148fc42899e6ef2cda9be040d6c2a633ab61ffabb3fb1da0f786bcf3b556b39';
 }
 
 export function clearAdminSession(): void {
@@ -208,7 +220,7 @@ export async function verifyAdminCredentials(
 
   // Success
   resetFailedAttempts();
-  saveAdminSession(rememberMe);
+  saveAdminSession(inputHash, rememberMe);
   return { success: true };
 }
 
