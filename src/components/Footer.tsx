@@ -170,7 +170,21 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <p>
             © {new Date().getFullYear()} {BRAND_INFO.name} ({BRAND_INFO.latinName}). Все права защищены.
           </p>
-          <p>{BRAND_INFO.address}</p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <p>{BRAND_INFO.address}</p>
+            <span aria-hidden="true" className="hidden sm:inline text-zinc-700">·</span>
+            <p>
+              Разработка{' '}
+              <a
+                href="https://t.me/marat_yakhimovich"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-zinc-400 hover:text-[#A3E635] transition-colors"
+              >
+                @marat_yakhimovich
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>
