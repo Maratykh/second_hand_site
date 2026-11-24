@@ -29,7 +29,9 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
 
   const [category, setCategory] = useState<ProductCategory | 'all'>(validInitialCat);
   const [subCategory, setSubCategory] = useState<string>('all');
-  const [size, setSize] = useState<ProductSize | 'all'>('all');
+  const [selectedSizes, setSelectedSizes] = useState<ProductSize[]>([]);
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
   const [search, setSearch] = useState(initialSearch);
   const [sort, setSort] = useState<'newest' | 'price-asc' | 'price-desc'>('newest');
   const [stockFilter, setStockFilter] = useState<'all' | 'inStock' | 'sold'>(
@@ -40,6 +42,22 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   const handleSelectCategory = (newCat: ProductCategory | 'all') => {
     setCategory(newCat);
     setSubCategory('all');
+  };
+
+  const handleToggleSize = (sz: ProductSize) => {
+    setSelectedSizes((prev) =>
+      prev.includes(sz) ? prev.filter((s) => s !== sz) : [...prev, sz]
+    );
+  };
+
+  const handlePricePreset = (min: string, max: string) => {
+    if (minPrice === min && maxPrice === max) {
+      setMinPrice('');
+      setMaxPrice('');
+    } else {
+      setMinPrice(min);
+      setMaxPrice(max);
+    }
   };
 
   // Sub-tabs calculation for active category (only computed when a category is selected)
@@ -80,9 +98,23 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
       }
     }
 
-    // Size
-    if (size !== 'all') {
-      result = result.filter((p) => p.sizes.includes(size));
+    // Sizes (Multi-select: match items containing ANY of the selected sizes)
+    if (selectedSizes.length > 0) {
+      result = result.filter((p) => p.sizes.some((sz) => selectedSizes.includes(sz)));
+    }
+
+    // Price Filter (Min and/or Max BYN)
+    if (minPrice.trim() !== '') {
+      const min = parseFloat(minPrice);
+      if (!isNaN(min)) {
+        result = result.filter((p) => p.price >= min);
+      }
+    }
+    if (maxPrice.trim() !== '') {
+      const max = parseFloat(maxPrice);
+      if (!isNaN(max)) {
+        result = result.filter((p) => p.price <= max);
+      }
     }
 
     // Stock
@@ -110,12 +142,12 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
     }
 
     return result;
-  }, [products, category, subCategory, size, stockFilter, search, sort]);
+  }, [products, category, subCategory, selectedSizes, minPrice, maxPrice, stockFilter, search, sort]);
 
   // Reset pagination limit when filters change
   React.useEffect(() => {
     setVisibleLimit(48);
-  }, [category, subCategory, size, stockFilter, search, sort]);
+  }, [category, subCategory, selectedSizes, minPrice, maxPrice, stockFilter, search, sort]);
 
   const inStockCount = useMemo(() => products.filter((p) => p.inStock).length, [products]);
   const soldCount = useMemo(() => products.filter((p) => !p.inStock).length, [products]);
@@ -123,7 +155,9 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   const resetFilters = () => {
     setCategory('all');
     setSubCategory('all');
-    setSize('all');
+    setSelectedSizes([]);
+    setMinPrice('');
+    setMaxPrice('');
     setSearch('');
     setSort('newest');
     setStockFilter('all');
@@ -132,7 +166,9 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   const hasActiveFilters =
     category !== 'all' ||
     subCategory !== 'all' ||
-    size !== 'all' ||
+    selectedSizes.length > 0 ||
+    minPrice.trim() !== '' ||
+    maxPrice.trim() !== '' ||
     search.trim().length > 0 ||
     stockFilter !== 'all';
 
@@ -290,57 +326,164 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           </div>
         )}
 
-        {/* Size Filter Row & Sort */}
-        <div className="pt-4 border-t border-zinc-800/70 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Размеры">
-            <span className="text-xs text-zinc-500 mr-1">Размер:</span>
-            <button
-              type="button"
-              onClick={() => setSize('all')}
-              className={`px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer ${
-                size === 'all'
-                  ? 'bg-zinc-100 text-[#09090B] font-bold'
-                  : 'bg-[#18181B] text-zinc-400 hover:text-white border border-zinc-800'
-              }`}
-            >
-              Все
-            </button>
-            {ALL_SIZES.map((sz) => (
+        {/* Size & Price Filters Bar */}
+        <div className="pt-4 border-t border-zinc-800/80 space-y-3.5">
+          {/* Row 1: Multi-select Sizes & Sort */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Размеры">
+              <span className="text-xs font-medium text-zinc-400 mr-1 flex items-center gap-1.5">
+                <span>Размеры:</span>
+                {selectedSizes.length > 0 && (
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 bg-[#A3E635] text-[#09090B] font-bold rounded">
+                    {selectedSizes.length}
+                  </span>
+                )}
+              </span>
               <button
-                key={sz}
                 type="button"
-                onClick={() => setSize(sz)}
+                onClick={() => setSelectedSizes([])}
                 className={`px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer ${
-                  size === sz
+                  selectedSizes.length === 0
                     ? 'bg-zinc-100 text-[#09090B] font-bold'
                     : 'bg-[#18181B] text-zinc-400 hover:text-white border border-zinc-800'
                 }`}
               >
-                {sz}
+                Все
               </button>
-            ))}
+              {ALL_SIZES.map((sz) => {
+                const isSelected = selectedSizes.includes(sz);
+                return (
+                  <button
+                    key={sz}
+                    type="button"
+                    onClick={() => handleToggleSize(sz)}
+                    className={`px-2.5 py-1 text-xs font-mono transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#A3E635] text-[#09090B] font-bold shadow-sm shadow-lime-950/40 ring-1 ring-[#A3E635]'
+                        : 'bg-[#18181B] text-zinc-400 hover:text-white border border-zinc-800'
+                    }`}
+                  >
+                    {sz}
+                  </button>
+                );
+              })}
+              {selectedSizes.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedSizes([])}
+                  className="text-[11px] text-zinc-500 hover:text-[#A3E635] ml-1 underline cursor-pointer"
+                >
+                  сбросить размеры
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 self-end lg:self-auto shrink-0">
+              <span className="text-xs text-zinc-500">Сортировка:</span>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as any)}
+                className="px-3 py-1.5 bg-[#09090B] border border-zinc-800 text-xs text-zinc-200 focus:outline-none focus:border-[#A3E635] cursor-pointer"
+              >
+                <option value="newest">Сначала новые</option>
+                <option value="price-asc">Сначала дешевле</option>
+                <option value="price-desc">Сначала дороже</option>
+              </select>
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="text-xs text-zinc-400 hover:text-[#A3E635] underline cursor-pointer whitespace-nowrap"
+                >
+                  Сбросить всё
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as any)}
-              className="px-3 py-1.5 bg-[#09090B] border border-zinc-800 text-xs text-zinc-200 focus:outline-none focus:border-[#A3E635]"
-            >
-              <option value="newest">Сначала новые</option>
-              <option value="price-asc">Сначала дешевле</option>
-              <option value="price-desc">Сначала дороже</option>
-            </select>
+          {/* Row 2: Price Range Filter & Presets */}
+          <div className="pt-3 border-t border-zinc-800/60 flex flex-wrap items-center gap-3">
+            <span className="text-xs font-medium text-zinc-400">Цена (BYN):</span>
 
-            {hasActiveFilters && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center bg-[#09090B] border border-zinc-800 px-2.5 py-1 focus-within:border-[#A3E635]">
+                <span className="text-xs text-zinc-500 mr-1.5 font-mono">от</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="1000"
+                  placeholder="0"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  className="w-14 bg-transparent text-xs text-white focus:outline-none font-mono"
+                />
+              </div>
+
+              <span className="text-zinc-600">—</span>
+
+              <div className="flex items-center bg-[#09090B] border border-zinc-800 px-2.5 py-1 focus-within:border-[#A3E635]">
+                <span className="text-xs text-zinc-500 mr-1.5 font-mono">до</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="1000"
+                  placeholder="340"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  className="w-14 bg-transparent text-xs text-white focus:outline-none font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Quick Price Presets */}
+            <div className="flex flex-wrap items-center gap-1.5 ml-0 sm:ml-2">
               <button
                 type="button"
-                onClick={resetFilters}
-                className="text-xs text-zinc-400 hover:text-[#A3E635] underline cursor-pointer"
+                onClick={() => handlePricePreset('', '50')}
+                className={`px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer ${
+                  minPrice === '' && maxPrice === '50'
+                    ? 'bg-[#A3E635] text-[#09090B] font-bold'
+                    : 'bg-[#18181B] text-zinc-400 hover:text-white border border-zinc-800'
+                }`}
               >
-                Сбросить
+                до 50 BYN
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => handlePricePreset('50', '100')}
+                className={`px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer ${
+                  minPrice === '50' && maxPrice === '100'
+                    ? 'bg-[#A3E635] text-[#09090B] font-bold'
+                    : 'bg-[#18181B] text-zinc-400 hover:text-white border border-zinc-800'
+                }`}
+              >
+                50 – 100 BYN
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePricePreset('100', '')}
+                className={`px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer ${
+                  minPrice === '100' && maxPrice === ''
+                    ? 'bg-[#A3E635] text-[#09090B] font-bold'
+                    : 'bg-[#18181B] text-zinc-400 hover:text-white border border-zinc-800'
+                }`}
+              >
+                от 100 BYN
+              </button>
+              {(minPrice !== '' || maxPrice !== '') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMinPrice('');
+                    setMaxPrice('');
+                  }}
+                  className="text-[11px] text-zinc-500 hover:text-[#A3E635] ml-1 underline cursor-pointer"
+                >
+                  очистить цену
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </section>
