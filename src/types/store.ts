@@ -1,4 +1,10 @@
-export type ProductCategory = 'jackets' | 'tshirts' | 'pants' | 'hoodies' | 'accessories';
+export type ProductCategory =
+  | 'jackets'
+  | 'tshirts'
+  | 'pants'
+  | 'hoodies'
+  | 'shoes'
+  | 'accessories';
 
 export type ProductSize = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'ONE SIZE';
 
@@ -103,19 +109,137 @@ export const BRAND_INFO = {
 export const ADMIN_EMAIL = 'gotdehgot@gmail.com';
 
 export const PRODUCT_CATEGORIES: { key: ProductCategory; label: string }[] = [
-  { key: 'jackets', label: 'Куртки и верхняя одежда' },
-  { key: 'tshirts', label: 'Футболки и лонгсливы' },
-  { key: 'pants', label: 'Джинсы и брюки' },
+  { key: 'jackets', label: 'Куртки' },
+  { key: 'tshirts', label: 'Футболки и майки' },
   { key: 'hoodies', label: 'Худи и свитшоты' },
+  { key: 'pants', label: 'Джинсы и брюки' },
+  { key: 'shoes', label: 'Кроссовки' },
   { key: 'accessories', label: 'Аксессуары' },
 ];
 
 export const CATEGORY_LABELS: Record<ProductCategory, string> = {
   jackets: 'Куртки',
-  tshirts: 'Футболки',
-  pants: 'Джинсы и брюки',
+  tshirts: 'Футболки и майки',
   hoodies: 'Худи и свитшоты',
+  pants: 'Джинсы и брюки',
+  shoes: 'Кроссовки',
   accessories: 'Аксессуары',
+};
+
+export interface SubCategoryDef {
+  key: string;
+  label: string;
+  match: (title: string, description: string) => boolean;
+}
+
+export const CATEGORY_SUBCATEGORIES: Record<ProductCategory, SubCategoryDef[]> = {
+  tshirts: [
+    {
+      key: 'maiki',
+      label: 'Майки',
+      match: (t, d) => /майка|tank\s*top|безрукав/i.test(`${t} ${d}`),
+    },
+    {
+      key: 'polo',
+      label: 'Поло',
+      match: (t, d) => /поло|polo/i.test(`${t} ${d}`),
+    },
+    {
+      key: 'tshirts_classic',
+      label: 'Футболки',
+      match: (t, d) => /футболк|tee|t-shirt/i.test(`${t} ${d}`) || !/майка|поло|лонгслив/i.test(`${t} ${d}`),
+    },
+    {
+      key: 'longsleeves',
+      label: 'Лонгсливы',
+      match: (t, d) => /лонгслив|long\s*sleeve/i.test(`${t} ${d}`),
+    },
+  ],
+  shoes: [
+    {
+      key: 'sneakers',
+      label: 'Кроссовки',
+      match: (t, d) => /кроссов|sneakers|runner/i.test(`${t} ${d}`),
+    },
+    {
+      key: 'skate_shoes',
+      label: 'Кеды',
+      match: (t, d) => /кед|vans|converse|dunk/i.test(`${t} ${d}`),
+    },
+  ],
+  accessories: [
+    {
+      key: 'bags',
+      label: 'Сумки & Рюкзаки',
+      match: (t, d) => /сумк|шопер|шоппер|рюкзак|мешок|bag|backpack/i.test(`${t} ${d}`),
+    },
+    {
+      key: 'eyewear',
+      label: 'Очки',
+      match: (t, d) => /очк|glasses|sunglasses/i.test(`${t} ${d}`),
+    },
+    {
+      key: 'headwear',
+      label: 'Кепки & Шапки',
+      match: (t, d) => /шапк|кепк|кепи|панам|бейсболк|beanie|cap|hat/i.test(`${t} ${d}`),
+    },
+    {
+      key: 'jewelry_belts',
+      label: 'Украшения & Ремни',
+      match: (t, d) => /кольц|ремен|цеп|браслет|значок|ring|belt/i.test(`${t} ${d}`),
+    },
+  ],
+  pants: [
+    {
+      key: 'jeans',
+      label: 'Джинсы',
+      match: (t, d) => /джинс|denim|jean/i.test(`${t} ${d}`),
+    },
+    {
+      key: 'shorts',
+      label: 'Шорты',
+      match: (t, d) => /шорт|short/i.test(`${t} ${d}`),
+    },
+    {
+      key: 'pants_cargo',
+      label: 'Штаны & Брюки',
+      match: (t, d) => /штан|брюк|карго|cargo|pant/i.test(`${t} ${d}`) && !/шорт/i.test(`${t} ${d}`),
+    },
+  ],
+  hoodies: [
+    {
+      key: 'hoodies_zip',
+      label: 'Худи & Зипки',
+      match: (t, d) => /худи|hoodie|зип/i.test(`${t} ${d}`),
+    },
+    {
+      key: 'sweatshirts',
+      label: 'Свитшоты',
+      match: (t, d) => /свитшот|sweatshirt|crewneck/i.test(`${t} ${d}`),
+    },
+    {
+      key: 'sweaters',
+      label: 'Свитеры',
+      match: (t, d) => /свитер|джемпер|кофт|вязаный|knit|sweater/i.test(`${t} ${d}`),
+    },
+  ],
+  jackets: [
+    {
+      key: 'windbreakers',
+      label: 'Ветровки',
+      match: (t, d) => /ветровк|дождевик|windbreaker|анорак/i.test(`${t} ${d}`),
+    },
+    {
+      key: 'bombers',
+      label: 'Бомберы',
+      match: (t, d) => /бомбер|bomber|varsity/i.test(`${t} ${d}`),
+    },
+    {
+      key: 'leather_denim',
+      label: 'Кожа & Джинс',
+      match: (t, d) => /кож|косух|джинсовк|leather/i.test(`${t} ${d}`),
+    },
+  ],
 };
 
 export const PRODUCT_STATUS_LABELS: Record<ProductStatus, string> = {

@@ -88,13 +88,15 @@ export function parseVkItemDescription(
   }
 
   const lowerText = (title + ' ' + clean).toLowerCase();
-  if (/шопер|шоппер|рюкзак|сумк|очки|кольцо|кепи|кепк|шапк|ремень|аксессуар|браслет|значок/i.test(lowerText)) {
+  if (/кроссов|кеды|обувь|ботинк|тапки|сланцы|сникеры|sneakers|boots/i.test(lowerText)) {
+    category = 'shoes';
+  } else if (/шопер|шоппер|рюкзак|сумк|очки|кольцо|кепи|кепк|шапк|ремень|аксессуар|браслет|значок/i.test(lowerText)) {
     category = 'accessories';
-  } else if (/свитшот|худи|байк|толстовк|кардиган|лонгслив|кофт|флис|олимпийк|джемпер|пуловер|водолазк/i.test(lowerText)) {
+  } else if (/свитшот|худи|байк|толстовк|кардиган|кофт|флис|олимпийк|джемпер|пуловер|водолазк/i.test(lowerText)) {
     category = 'hoodies';
   } else if (/куртк|косух|ветровк|бомбер|пуховик|пальто|плащ|жилет|анорак/i.test(lowerText)) {
     category = 'jackets';
-  } else if (/футболк|майк|поло/i.test(lowerText)) {
+  } else if (/футболк|майк|поло|лонгслив/i.test(lowerText)) {
     category = 'tshirts';
   } else if (/джинс|брюк|штаны|шорт|карго|спортивки/i.test(lowerText)) {
     category = 'pants';

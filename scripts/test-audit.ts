@@ -1,5 +1,5 @@
 import { validateProductFormData, sanitizeMeasurements } from '../src/utils/storeLogic';
-import { SCHEMA_LIMITS, PRODUCT_CATEGORIES } from '../src/types/store';
+import { SCHEMA_LIMITS, PRODUCT_CATEGORIES, CATEGORY_SUBCATEGORIES } from '../src/types/store';
 import type { Product, ProductSize, ProductStatus } from '../src/types/store';
 import fs from 'fs';
 import path from 'path';
@@ -73,7 +73,7 @@ assert(res5.valid && !res5.error, 'Успешно валидирует корр�
 const res6 = validateProductFormData({
   title: 'Черновик без цены',
   price: 0,
-  sizes: ['OS'],
+  sizes: ['ONE SIZE'],
   images: ['https://example.com/draft.jpg'],
   status: 'draft',
 });
@@ -104,6 +104,7 @@ const draftProduct: Product = {
   measurements: cleanMeasurements,
   status: 'draft',
   inStock: true,
+  featured: false,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
@@ -124,8 +125,9 @@ console.log('\n--- 3. AUDIT ANALYTICS & WAREHOUSE INVENTORY (In-Memory / Zero Fi
 const mockInventory: Product[] = [
   { ...publishedUpdate, id: '1', price: 100, inStock: true, category: 'jackets' },
   { ...publishedUpdate, id: '2', price: 60, inStock: true, category: 'tshirts' },
-  { ...publishedUpdate, id: '3', price: 80, inStock: false, category: 'denim' },
+  { ...publishedUpdate, id: '3', price: 80, inStock: false, category: 'pants' },
   { ...publishedUpdate, id: '4', price: 120, inStock: true, category: 'hoodies' },
+  { ...publishedUpdate, id: '5', price: 150, inStock: true, category: 'shoes' },
 ];
 
 const inStockItems = mockInventory.filter((p) => p.inStock);
@@ -134,8 +136,8 @@ const totalByn = inStockItems.reduce((acc, p) => acc + p.price, 0);
 const totalRub = Math.round(totalByn * 30);
 const soldByn = soldItems.reduce((acc, p) => acc + p.price, 0);
 
-assert(totalByn === 280, `Общая стоимость склада в BYN корректна (${totalByn} BYN)`);
-assert(totalRub === 8400, `Конвертация склада в RUB корректна (${totalRub} RUB)`);
+assert(totalByn === 430, `Общая стоимость склада в BYN корректна (${totalByn} BYN)`);
+assert(totalRub === 12900, `Конвертация склада в RUB корректна (${totalRub} RUB)`);
 assert(soldByn === 80, `Сумма проданных позиций корректна (${soldByn} BYN)`);
 
 // Interest calculation: score = fittings * 2 + wishlist
@@ -172,6 +174,20 @@ const vercelRaw = fs.readFileSync(vercelConfigPath, 'utf8');
 const vercelJson = JSON.parse(vercelRaw);
 const hasSpaRewrite = vercelJson.rewrites?.some((r: any) => r.source === '/(.*)' && r.destination === '/index.html');
 assert(hasSpaRewrite, 'vercel.json настроен с перенаправлением /(.*) -> /index.html (защита от 404 при F5)');
+
+console.log('\n--- 6. AUDIT SUBCATEGORIES (Кроссовки отдельно, Майки и Поло отдельно) ---');
+assert(PRODUCT_CATEGORIES.some((c) => c.key === 'shoes'), 'Категория «Кроссовки» выделена отдельно в главном меню');
+assert(PRODUCT_CATEGORIES.some((c) => c.key === 'accessories'), 'Категория «Аксессуары» отделена от кроссовок');
+
+const tshirtsSubs = CATEGORY_SUBCATEGORIES.tshirts;
+const hasMaiki = tshirtsSubs.some((s) => s.key === 'maiki');
+const hasPolo = tshirtsSubs.some((s) => s.key === 'polo');
+assert(hasMaiki && hasPolo, 'В категории «Футболки и майки» майки и поло разграничены отдельными подвкладками');
+
+const maikaMatch = tshirtsSubs.find((s) => s.key === 'maiki')?.match('Майка Hard Rock Cafe', '');
+const poloMatch = tshirtsSubs.find((s) => s.key === 'polo')?.match('Поло Fred Perry', '');
+assert(Boolean(maikaMatch), 'Подвкладка «Майки» корректно определяет майки');
+assert(Boolean(poloMatch), 'Подвкладка «Поло» корректно определяет поло');
 
 console.log('\n========================================');
 console.log(`Итоги аудита: Успешно пройдены ${passed} тестов из ${passed + failed}`);

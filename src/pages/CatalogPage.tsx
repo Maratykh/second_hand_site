@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { CheckCircle2, Clock, Search, SlidersHorizontal, X, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, CornerDownRight, Search, SlidersHorizontal, X, XCircle } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import type { ProductCategory, ProductSize } from '../types/store';
-import { ALL_SIZES, CATEGORY_LABELS, PRODUCT_CATEGORIES } from '../types/store';
+import { ALL_SIZES, CATEGORY_LABELS, CATEGORY_SUBCATEGORIES, PRODUCT_CATEGORIES } from '../types/store';
 import { ProductCard } from '../components/ProductCard';
 import type { AppRoute } from '../components/Header';
 
@@ -28,6 +28,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
     : 'all';
 
   const [category, setCategory] = useState<ProductCategory | 'all'>(validInitialCat);
+  const [subCategory, setSubCategory] = useState<string>('all');
   const [size, setSize] = useState<ProductSize | 'all'>('all');
   const [search, setSearch] = useState(initialSearch);
   const [sort, setSort] = useState<'newest' | 'price-asc' | 'price-desc'>('newest');
@@ -36,12 +37,47 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   );
   const [visibleLimit, setVisibleLimit] = useState(48);
 
+  const handleSelectCategory = (newCat: ProductCategory | 'all') => {
+    setCategory(newCat);
+    setSubCategory('all');
+  };
+
+  // Sub-tabs calculation for active category (only computed when a category is selected)
+  const activeCategorySubTabs = useMemo(() => {
+    if (category === 'all') return [];
+    const subDefs = CATEGORY_SUBCATEGORIES[category] || [];
+    const catProducts = products.filter((p) => p.category === category);
+
+    const list = subDefs.map((def) => {
+      const count = catProducts.filter((p) => def.match(p.title || '', p.description || '')).length;
+      return {
+        key: def.key,
+        label: def.label,
+        count,
+      };
+    });
+
+    return [
+      { key: 'all', label: 'Все', count: catProducts.length },
+      ...list,
+    ];
+  }, [category, products]);
+
   const filteredProducts = useMemo(() => {
     let result = products.slice();
 
     // Category
     if (category !== 'all') {
       result = result.filter((p) => p.category === category);
+    }
+
+    // Sub-category (подвкладка)
+    if (category !== 'all' && subCategory !== 'all') {
+      const subDefs = CATEGORY_SUBCATEGORIES[category];
+      const selectedDef = subDefs?.find((s) => s.key === subCategory);
+      if (selectedDef) {
+        result = result.filter((p) => selectedDef.match(p.title || '', p.description || ''));
+      }
     }
 
     // Size
@@ -74,18 +110,19 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
     }
 
     return result;
-  }, [products, category, size, stockFilter, search, sort]);
+  }, [products, category, subCategory, size, stockFilter, search, sort]);
 
   // Reset pagination limit when filters change
   React.useEffect(() => {
     setVisibleLimit(48);
-  }, [category, size, stockFilter, search, sort]);
+  }, [category, subCategory, size, stockFilter, search, sort]);
 
   const inStockCount = useMemo(() => products.filter((p) => p.inStock).length, [products]);
   const soldCount = useMemo(() => products.filter((p) => !p.inStock).length, [products]);
 
   const resetFilters = () => {
     setCategory('all');
+    setSubCategory('all');
     setSize('all');
     setSearch('');
     setSort('newest');
@@ -93,7 +130,11 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   };
 
   const hasActiveFilters =
-    category !== 'all' || size !== 'all' || search.trim().length > 0 || stockFilter !== 'all';
+    category !== 'all' ||
+    subCategory !== 'all' ||
+    size !== 'all' ||
+    search.trim().length > 0 ||
+    stockFilter !== 'all';
 
   return (
     <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -146,7 +187,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Категории">
             <button
               type="button"
-              onClick={() => setCategory('all')}
+              onClick={() => handleSelectCategory('all')}
               className={`px-3.5 py-2 text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 category === 'all'
                   ? 'bg-[#A3E635] text-[#09090B] font-semibold'
@@ -159,7 +200,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               <button
                 key={cat.key}
                 type="button"
-                onClick={() => setCategory(cat.key)}
+                onClick={() => handleSelectCategory(cat.key)}
                 className={`px-3.5 py-2 text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                   category === cat.key
                     ? 'bg-[#A3E635] text-[#09090B] font-semibold'
@@ -210,6 +251,44 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Dynamic Sub-tabs Row (Подвкладка: появляется при нажатии на категорию) */}
+        {activeCategorySubTabs.length > 0 && (
+          <div className="pt-3.5 border-t border-zinc-800/80 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 shrink-0 flex items-center gap-1.5 mr-1">
+              <CornerDownRight className="w-3.5 h-3.5 text-[#A3E635]" aria-hidden="true" />
+              <span>Подвкладка:</span>
+            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {activeCategorySubTabs.map((sub) => {
+                const isSelected = subCategory === sub.key;
+                return (
+                  <button
+                    key={sub.key}
+                    type="button"
+                    onClick={() => setSubCategory(sub.key)}
+                    className={`px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap cursor-pointer inline-flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-[#A3E635] text-[#09090B] font-bold shadow-sm shadow-lime-950/50'
+                        : 'bg-[#18181B] text-zinc-300 hover:text-white hover:bg-zinc-800 border border-zinc-800'
+                    }`}
+                  >
+                    <span>{sub.label}</span>
+                    <span
+                      className={`text-[10px] font-mono tabular-nums px-1.5 py-0.5 rounded-full ${
+                        isSelected
+                          ? 'bg-[#09090B]/25 text-[#09090B] font-bold'
+                          : 'bg-zinc-800/90 text-zinc-400'
+                      }`}
+                    >
+                      {sub.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Size Filter Row & Sort */}
         <div className="pt-4 border-t border-zinc-800/70 flex flex-wrap items-center justify-between gap-4">
