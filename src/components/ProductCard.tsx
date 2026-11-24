@@ -119,7 +119,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, ind
                 {formatPriceBYN(product.price)}
               </span>
               <span className="font-mono text-xs text-zinc-400 truncate">
-                {product.sizes.join(' / ')}
+                {product.sizes.join(' / ')}{product.category === 'shoes' && !product.sizes.join(' ').includes('EU') ? ' EU' : ''}
               </span>
             </div>
 

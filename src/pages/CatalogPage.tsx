@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { CheckCircle2, Clock, CornerDownRight, Search, SlidersHorizontal, X, XCircle } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import type { ProductCategory, ProductSize } from '../types/store';
-import { ALL_SIZES, CATEGORY_LABELS, CATEGORY_SUBCATEGORIES, PRODUCT_CATEGORIES } from '../types/store';
+import { ALL_SIZES, CATEGORY_LABELS, CATEGORY_SUBCATEGORIES, CLOTHING_SIZES, PRODUCT_CATEGORIES, SHOE_SIZES } from '../types/store';
 import { ProductCard } from '../components/ProductCard';
 import type { AppRoute } from '../components/Header';
 
@@ -29,6 +29,9 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
 
   const [category, setCategory] = useState<ProductCategory | 'all'>(validInitialCat);
   const [subCategory, setSubCategory] = useState<string>('all');
+  const [sizeMode, setSizeMode] = useState<'clothing' | 'shoes'>(
+    validInitialCat === 'shoes' ? 'shoes' : 'clothing'
+  );
   const [selectedSizes, setSelectedSizes] = useState<ProductSize[]>([]);
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
@@ -42,6 +45,11 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   const handleSelectCategory = (newCat: ProductCategory | 'all') => {
     setCategory(newCat);
     setSubCategory('all');
+    if (newCat === 'shoes') {
+      setSizeMode('shoes');
+    } else if (newCat !== 'all') {
+      setSizeMode('clothing');
+    }
   };
 
   const handleToggleSize = (sz: ProductSize) => {
@@ -331,8 +339,31 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           {/* Row 1: Multi-select Sizes & Sort */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Размеры">
+              {category === 'all' && (
+                <div className="inline-flex rounded border border-zinc-800 p-0.5 bg-[#09090B] mr-2">
+                  <button
+                    type="button"
+                    onClick={() => setSizeMode('clothing')}
+                    className={`px-2 py-0.5 text-[10px] font-medium transition-colors cursor-pointer ${
+                      sizeMode === 'clothing' ? 'bg-zinc-700 text-white font-bold' : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    Одежда
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSizeMode('shoes')}
+                    className={`px-2 py-0.5 text-[10px] font-medium transition-colors cursor-pointer ${
+                      sizeMode === 'shoes' ? 'bg-[#A3E635] text-[#09090B] font-bold' : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    Обувь (EU)
+                  </button>
+                </div>
+              )}
+
               <span className="text-xs font-medium text-zinc-400 mr-1 flex items-center gap-1.5">
-                <span>Размеры:</span>
+                <span>{category === 'shoes' || sizeMode === 'shoes' ? 'Размеры обуви (EU):' : 'Размеры:'}</span>
                 {selectedSizes.length > 0 && (
                   <span className="text-[10px] font-mono px-1.5 py-0.5 bg-[#A3E635] text-[#09090B] font-bold rounded">
                     {selectedSizes.length}
@@ -350,7 +381,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               >
                 Все
               </button>
-              {ALL_SIZES.map((sz) => {
+              {(category === 'shoes' || sizeMode === 'shoes' ? SHOE_SIZES : CLOTHING_SIZES).map((sz) => {
                 const isSelected = selectedSizes.includes(sz);
                 return (
                   <button

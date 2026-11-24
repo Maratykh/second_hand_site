@@ -7,7 +7,9 @@ export type ProductCategory =
   | 'shoes'
   | 'accessories';
 
-export type ProductSize = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'ONE SIZE';
+export type ClothingSize = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'ONE SIZE';
+export type ShoeSize = '36' | '37' | '38' | '39' | '40' | '41' | '42' | '43' | '44' | '45' | '46' | '47' | '48' | '49';
+export type ProductSize = ClothingSize | ShoeSize | string;
 
 export type ProductStatus = 'draft' | 'published';
 
@@ -310,7 +312,11 @@ export const PRODUCT_STATUS_LABELS: Record<ProductStatus, string> = {
   published: 'Опубликован',
 };
 
-export const ALL_SIZES: ProductSize[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'ONE SIZE'];
+export const CLOTHING_SIZES: ProductSize[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'ONE SIZE'];
+export const SHOE_SIZES: ProductSize[] = [
+  '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49'
+];
+export const ALL_SIZES: ProductSize[] = CLOTHING_SIZES;
 
 export const DELIVERY_METHODS: { key: DeliveryMethod; label: string; note: string }[] = [
   { key: 'europost', label: 'Европочта (Беларусь)', note: '2–3 рабочих дня до отделения, оплата при получении' },
