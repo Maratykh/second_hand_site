@@ -1,6 +1,6 @@
 import type { Product } from '../types/store';
 
-export const HERO_BANNER_IMAGE = 'https://sun9-80.vkuserphoto.ru/s/v1/ig2/T-cUaprXpIff-lZYZBK9_tKJEtsJSMr1i5urNhhn5Yl_z5gfzF-gvmgrQEAG-3eCs3zlhm0gepssoZgdFRN2YNAw.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350,1280x1600,1440x1800,2048x2560&from=bu&cs=1280x0';
+export const HERO_BANNER_IMAGE = '/assets/images/hero_banner.jpg';
 
 // Initial fast skeleton/bootstrap batch (8 items). The full 1,500+ items load asynchronously via /data/seedProducts.json
 export const SEED_PRODUCTS: Product[] = [

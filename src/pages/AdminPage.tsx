@@ -13,6 +13,7 @@ import {
   Flame,
   Heart,
   Image as ImageIcon,
+  Info,
   KeyRound,
   Lock,
   LogIn,
@@ -948,6 +949,16 @@ export const AdminPage: React.FC = () => {
               <p className="text-xs text-zinc-400 mt-1">
                 Здесь можно легко заменить фотографию на главной афише, поменять заголовок и описание свежего дропа.
               </p>
+            </div>
+
+            <div className="p-3 bg-zinc-900 border border-zinc-700/70 text-xs text-zinc-300 leading-relaxed flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-[#A3E635] shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold text-white">Синхронизация между устройствами:</span>
+                <p className="mt-0.5 text-zinc-400">
+                  Установленное фото афиши зафиксировано в файлах сайта (<code className="text-zinc-200 font-mono">/assets/images/hero_banner.jpg</code>) и отображается на всех телефонах, компьютерах и у посетителей.
+                </p>
+              </div>
             </div>
 
             {/* Live Preview Box */}
