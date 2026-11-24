@@ -1,11 +1,12 @@
-import React from 'react';
-import { Check, CheckCircle2, Heart, MessageCircle, Ruler, XCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, CheckCircle2, Edit3, Heart, MessageCircle, Ruler, Trash2, XCircle } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import type { Product } from '../types/store';
 import { BRAND_INFO, CATEGORY_LABELS } from '../types/store';
 import { formatPriceBYN } from '../utils/storeLogic';
 import { SafeImage } from './SafeImage';
 import { ScrollReveal } from './ScrollReveal';
+import { AdminProductFormModal } from './admin/AdminProductFormModal';
 
 interface ProductCardProps {
   product: Product;
@@ -14,9 +15,10 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, index = 0 }) => {
-  const { fittingIds, toggleFitting, wishlistIds, toggleWishlist, isAdmin, setProductInStock } =
+  const { fittingIds, toggleFitting, wishlistIds, toggleWishlist, isAdmin, setProductInStock, deleteProduct } =
     useStore();
 
+  const [isEditing, setIsEditing] = useState(false);
   const isFitting = fittingIds.includes(product.id);
   const isWishlisted = wishlistIds.includes(product.id);
   const displayTitle = product.title.trim() || 'Винтажная позиция';
@@ -30,6 +32,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, ind
     e.stopPropagation();
     e.preventDefault();
     await setProductInStock(product.id, !product.inStock);
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (window.confirm(`Удалить вещь «${displayTitle}» из каталога?`)) {
+      await deleteProduct(product.id);
+    }
   };
 
   return (
@@ -162,14 +172,30 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, ind
                 <Ruler className="w-3 h-3 shrink-0" />
                 <span>{isFitting ? 'В примерках' : 'Померить'}</span>
               </button>
+            </div>
 
-              {/* Employee 1-Click Toggle for Logged-In Admin */}
-              {isAdmin && (
+            {/* In-Catalog Admin Controls */}
+            {isAdmin && (
+              <div className="pt-2.5 mt-1 border-t border-dashed border-[#A3E635]/40 flex items-center gap-1.5 bg-[#A3E635]/5 -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 p-2.5">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setIsEditing(true);
+                  }}
+                  className="flex-1 py-1.5 px-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-[#A3E635] text-white text-[11px] font-mono font-medium inline-flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                  title="Редактировать товар (цена, замеры, размеры, фото)"
+                >
+                  <Edit3 className="w-3 h-3 text-[#A3E635]" />
+                  <span>Настройки</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={handleToggleStock}
                   title={product.inStock ? 'Нажмите, чтобы отметить ПРОДАНО' : 'Нажмите, чтобы вернуть В НАЛИЧИЕ'}
-                  className={`px-2.5 py-1.5 text-xs font-mono font-bold border transition-colors cursor-pointer shrink-0 ${
+                  className={`py-1.5 px-2 border text-[11px] font-mono font-bold inline-flex items-center justify-center gap-1 transition-colors cursor-pointer shrink-0 ${
                     product.inStock
                       ? 'bg-red-950/40 border-red-800 text-red-300 hover:bg-red-900/60'
                       : 'bg-lime-950/40 border-lime-800 text-lime-300 hover:bg-lime-900/60'
@@ -177,10 +203,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, ind
                 >
                   {product.inStock ? '✕ Продано' : '✓ В наличие'}
                 </button>
-              )}
-            </div>
+
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  title="Удалить товар из каталога"
+                  className="p-1.5 bg-red-950/30 hover:bg-red-900/60 border border-red-800/80 text-red-400 hover:text-red-200 transition-colors cursor-pointer shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* In-Catalog Admin Edit Modal */}
+        {isEditing && (
+          <AdminProductFormModal
+            initialProduct={product}
+            onClose={() => setIsEditing(false)}
+          />
+        )}
       </article>
     </ScrollReveal>
   );

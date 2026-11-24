@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Edit3,
   ExternalLink,
   Heart,
   Maximize2,
@@ -11,6 +12,7 @@ import {
   PackageCheck,
   Ruler,
   ShieldAlert,
+  Trash2,
   Truck,
   X,
   XCircle,
@@ -21,6 +23,7 @@ import type { ProductSize } from '../types/store';
 import { BRAND_INFO, CATEGORY_LABELS } from '../types/store';
 import { formatMeasurementValue, formatPriceBYN } from '../utils/storeLogic';
 import { SafeImage } from '../components/SafeImage';
+import { AdminProductFormModal } from '../components/admin/AdminProductFormModal';
 import type { AppRoute } from '../components/Header';
 
 interface ProductDetailPageProps {
@@ -32,13 +35,14 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   productId,
   onNavigate,
 }) => {
-  const { products, fittingIds, toggleFitting, wishlistIds, toggleWishlist, isAdmin, setProductInStock } =
+  const { products, fittingIds, toggleFitting, wishlistIds, toggleWishlist, isAdmin, setProductInStock, deleteProduct } =
     useStore();
   const product = products.find((p) => p.id === productId);
 
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [selectedSize, setSelectedSize] = useState<ProductSize | null>(null);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     setSelectedImageIdx(0);
@@ -63,6 +67,14 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
       document.body.style.overflow = '';
     };
   }, [isGalleryOpen, product?.images]);
+
+  const handleDelete = () => {
+    if (!product) return;
+    if (window.confirm(`Вы уверены, что хотите безвозвратно удалить товар «${product.title}»?`)) {
+      deleteProduct(product.id);
+      onNavigate({ page: 'catalog' });
+    }
+  };
 
   if (!product) {
     return (
@@ -205,27 +217,49 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             </p>
           </div>
 
-          {/* Employee Quick Control Box (When Logged in as Admin) */}
+          {/* Admin Quick Control Box (When Logged in as Admin) */}
           {isAdmin && (
             <div className="p-4 bg-zinc-950 border border-zinc-800 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold text-zinc-300 uppercase">
-                  Учёт наличия (Сотрудник)
+                <span className="text-xs font-mono font-bold text-zinc-300 uppercase flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#A3E635] animate-pulse"></span>
+                  Управление товаром (Администратор)
                 </span>
                 <span className={`text-xs font-bold ${product.inStock ? 'text-[#A3E635]' : 'text-zinc-500'}`}>
                   {product.inStock ? '● В наличии' : '○ Продано'}
                 </span>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="py-2.5 px-4 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-[#A3E635] text-white text-xs font-mono font-semibold inline-flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Edit3 className="w-4 h-4 text-[#A3E635]" />
+                  <span>Редактировать товар</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setProductInStock(product.id, !product.inStock)}
+                  className={`py-2.5 px-4 text-xs font-mono font-bold uppercase tracking-wider transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5 ${
+                    product.inStock
+                      ? 'bg-red-950/50 border border-red-800 text-red-200 hover:bg-red-900'
+                      : 'bg-lime-950/50 border border-lime-800 text-lime-200 hover:bg-lime-900'
+                  }`}
+                >
+                  {product.inStock ? '✕ Отметить как ПРОДАНО' : '✓ Вернуть В НАЛИЧИЕ'}
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={() => setProductInStock(product.id, !product.inStock)}
-                className={`w-full py-2.5 px-4 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
-                  product.inStock
-                    ? 'bg-red-950/60 border border-red-800 text-red-200 hover:bg-red-900'
-                    : 'bg-lime-950/60 border border-lime-800 text-lime-200 hover:bg-lime-900'
-                }`}
+                onClick={handleDelete}
+                className="w-full py-2 px-3 bg-red-950/20 hover:bg-red-950/50 border border-red-900/60 text-red-400 hover:text-red-300 text-xs font-mono transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5"
               >
-                {product.inStock ? '✕ Отметить как ПРОДАНО' : '✓ Вернуть В НАЛИЧИЕ'}
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Удалить товар из базы</span>
               </button>
             </div>
           )}
@@ -468,6 +502,14 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             </div>
           )}
         </div>
+      )}
+
+      {/* In-Page Admin Edit Modal */}
+      {isAdmin && isEditing && (
+        <AdminProductFormModal
+          initialProduct={product}
+          onClose={() => setIsEditing(false)}
+        />
       )}
     </div>
   );
