@@ -194,6 +194,15 @@ const accessoriesSubs = CATEGORY_SUBCATEGORIES.accessories;
 const buffMatch = accessoriesSubs.find((s) => s.key === 'headwear')?.match('флисовый баф', 'аксессуар');
 assert(Boolean(buffMatch), 'Флисовый баф корректно относится к подвкладке аксессуаров');
 
+// Pants & Sport pants test
+const pantsSubs = CATEGORY_SUBCATEGORIES.pants;
+const hasSportPants = pantsSubs.some((s) => s.key === 'sport_pants');
+assert(hasSportPants, 'Подвкладка «Спортивные штаны» вынесена отдельно в штанах');
+const sportMatch = pantsSubs.find((s) => s.key === 'sport_pants')?.match('Спортивные штаны Nike', '');
+const jeansMatch = pantsSubs.find((s) => s.key === 'jeans')?.match('Джинсы Levis 501', '');
+assert(Boolean(sportMatch), 'Подвкладка «Спортивные штаны» корректно определяет спортивки');
+assert(Boolean(jeansMatch), 'Подвкладка «Джинсы» корректно определяет джинсы');
+
 console.log('\n========================================');
 console.log(`Итоги аудита: Успешно пройдены ${passed} тестов из ${passed + failed}`);
 if (failed > 0) {

@@ -193,17 +193,29 @@ export const CATEGORY_SUBCATEGORIES: Record<ProductCategory, SubCategoryDef[]> =
     {
       key: 'jeans',
       label: 'Джинсы',
-      match: (t, d) => /джинс|denim|jean/i.test(`${t} ${d}`),
+      match: (t) => /джинс|denim|jean/i.test(t) && !/шорт|комбинезон/i.test(t),
+    },
+    {
+      key: 'sport_pants',
+      label: 'Спортивные штаны',
+      match: (t) => /спорт|треник|track|sweatpant|jogger|трико/i.test(t),
     },
     {
       key: 'shorts',
       label: 'Шорты',
-      match: (t, d) => /шорт|short/i.test(`${t} ${d}`),
+      match: (t) => /шорт|short/i.test(t),
     },
     {
-      key: 'pants_cargo',
-      label: 'Штаны & Брюки',
-      match: (t, d) => /штан|брюк|карго|cargo|pant/i.test(`${t} ${d}`) && !/шорт/i.test(`${t} ${d}`),
+      key: 'cargo_chinos',
+      label: 'Брюки & Чиносы',
+      match: (t) =>
+        /брюк|чинос|карго|штан|cargo|chino/i.test(t) &&
+        !/джинс|шорт|спорт|треник|комбинезон/i.test(t),
+    },
+    {
+      key: 'overalls',
+      label: 'Комбинезоны',
+      match: (t) => /комбинезон/i.test(t),
     },
   ],
   hoodies: [
@@ -227,17 +239,24 @@ export const CATEGORY_SUBCATEGORIES: Record<ProductCategory, SubCategoryDef[]> =
     {
       key: 'windbreakers',
       label: 'Ветровки',
-      match: (t, d) => /ветровк|дождевик|windbreaker|анорак/i.test(`${t} ${d}`),
+      match: (t) => /ветровк|дождевик|windbreaker|анорак/i.test(t),
     },
     {
       key: 'bombers',
       label: 'Бомберы',
-      match: (t, d) => /бомбер|bomber|varsity/i.test(`${t} ${d}`),
+      match: (t) => /бомбер|bomber|varsity/i.test(t),
     },
     {
       key: 'leather_denim',
       label: 'Кожа & Джинс',
-      match: (t, d) => /кож|косух|джинсовк|leather/i.test(`${t} ${d}`),
+      match: (t) => /кож|косух|джинсовк|leather/i.test(t),
+    },
+    {
+      key: 'jackets_other',
+      label: 'Куртки & Пуховики',
+      match: (t) =>
+        /куртк|пуховик|пальто|плащ|жилет/i.test(t) &&
+        !/ветровк|дождевик|бомбер|косух|джинсовк/i.test(t),
     },
   ],
 };
