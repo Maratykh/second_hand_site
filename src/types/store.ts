@@ -86,6 +86,22 @@ export interface CheckoutFormInput {
   comment: string;
 }
 
+export interface PromoBannerSettings {
+  enabled: boolean;
+  text: string;
+  badge?: string;
+  linkText?: string;
+  linkUrl?: string;
+}
+
+export const DEFAULT_PROMO_SETTINGS: PromoBannerSettings = {
+  enabled: true,
+  badge: '🔥 СВЕЖИЙ ДРОП',
+  text: 'Большой завоз архивных курток и свитшотов! Ждём на примерку на ул. Веры Хоружей 3',
+  linkText: 'Смотреть каталог →',
+  linkUrl: '#/catalog',
+};
+
 export const BRAND_INFO = {
   name: 'Лавка Зомби',
   latinName: 'Lavka Zombie',

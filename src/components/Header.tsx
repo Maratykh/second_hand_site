@@ -19,7 +19,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
-  const { validFittingCount, isAdmin } = useStore();
+  const { validFittingCount, isAdmin, promoSettings } = useStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [headerSearch, setHeaderSearch] = useState('');
 
@@ -58,6 +58,32 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
 
   return (
     <header className="sticky top-0 z-40 bg-[#09090B]/95 backdrop-blur-md border-b border-zinc-800/80">
+      {/* Top Announcement / Promo Bar */}
+      {promoSettings?.enabled && promoSettings.text && (
+        <aside
+          aria-label="Актуальный анонс или акция"
+          className="bg-[#A3E635] text-[#09090B] px-3 sm:px-4 py-1.5 text-xs font-semibold tracking-wide flex items-center justify-center gap-2 border-b border-lime-400/80 transition-all select-none shadow-sm"
+        >
+          {promoSettings.badge && (
+            <span className="bg-[#09090B] text-[#A3E635] text-[10px] font-mono uppercase px-2 py-0.5 font-bold tracking-wider shrink-0">
+              {promoSettings.badge}
+            </span>
+          )}
+          <span className="truncate max-w-[70vw] sm:max-w-none text-center">
+            {promoSettings.text}
+          </span>
+          {promoSettings.linkText && (
+            <button
+              type="button"
+              onClick={() => handleLinkClick({ page: 'catalog' })}
+              className="hidden sm:inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-85 font-bold ml-1 cursor-pointer shrink-0"
+            >
+              <span>{promoSettings.linkText}</span>
+            </button>
+          )}
+        </aside>
+      )}
+
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4 sm:gap-6">
         {/* Brand Wordmark */}
         <a

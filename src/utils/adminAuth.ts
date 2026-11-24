@@ -16,12 +16,19 @@ const CUSTOM_HASH_KEY = 'zombie_custom_admin_hash';
 // Pre-computed salted SHA-256 hashes for standard allowed passwords
 // salt: 'lavka_zombie_salt_2026_minsk'
 const VALID_HASHES = new Set([
+  '8ab76e6a141adfab35933668bed37f41d5ee92f987b290419dd6fc2d6ef91982', // Zombie2026#Vault!Minsk
+  '743d00001bc18c1046ee0bcead7a087395e93f9d1b9225dc01f89301b38fd5cd', // LZ#90s_Vintage!Minsk
   'e148fc42899e6ef2cda9be040d6c2a633ab61ffabb3fb1da0f786bcf3b556b39', // ZombieMinsk2026!
-  '49ad7f766ceb840b3c0c8eb9bb64d383d78f89a92c7c810e04f4d81968ccc386', // zombie2026
-  '9340e48c93988dab10e70935d91770d59a4263f555cd3ebb17d50be112f9e9d5', // admin2026
 ]);
 
-const ALLOWED_USERNAMES = new Set(['admin', 'zombie', 'nikita', 'gotdehgot@gmail.com', 'gotdehgot']);
+const ALLOWED_USERNAMES = new Set([
+  'zombie_boss',
+  'lz_minsk',
+  'nikita_zombie',
+  'zombie_owner',
+  'nikita',
+  'gotdehgot@gmail.com',
+]);
 
 export interface LockoutStatus {
   isLocked: boolean;
@@ -163,11 +170,8 @@ export async function verifyAdminCredentials(
   }
 
   const username = usernameInput.trim().toLowerCase();
-  if (!username) {
-    return { success: false, error: 'Введите логин администратора' };
-  }
-  if (!passwordInput) {
-    return { success: false, error: 'Введите пароль' };
+  if (!username || !passwordInput) {
+    return { success: false, error: 'Введите логин и пароль' };
   }
 
   // Check username
@@ -198,7 +202,7 @@ export async function verifyAdminCredentials(
     }
     return {
       success: false,
-      error: `Неверный пароль. Осталось попыток: ${updated.remainingAttempts}`,
+      error: `Неверный логин или пароль. Осталось попыток: ${updated.remainingAttempts}`,
     };
   }
 

@@ -32,6 +32,8 @@ import type {
   ProductMeasurements,
   ProductSize,
   ProductStatus,
+  PromoBannerSettings,
+  DEFAULT_PROMO_SETTINGS,
 } from '../types/store';
 import { ADMIN_EMAIL, SCHEMA_LIMITS } from '../types/store';
 import {
@@ -63,6 +65,7 @@ const LOCAL_DELETED_KEY = 'zombie_deleted_products_v1';
 const LOCAL_OVERRIDES_KEY = 'zombie_product_overrides_v1';
 const LOCAL_CUSTOM_PRODUCTS_KEY = 'zombie_custom_products_v1';
 const LOCAL_HERO_KEY = 'zombie_hero_settings_v1';
+const LOCAL_PROMO_KEY = 'zombie_promo_settings_v1';
 const LOCAL_INTEREST_KEY = 'zombie_interest_stats_v1';
 
 export interface HeroSettings {
@@ -155,6 +158,11 @@ interface StoreContextValue {
   heroSettings: HeroSettings;
   updateHeroSettings: (settings: Partial<HeroSettings>) => void;
   resetHeroSettings: () => void;
+
+  // Promo Banner Customization
+  promoSettings: PromoBannerSettings;
+  updatePromoSettings: (settings: Partial<PromoBannerSettings>) => void;
+  resetPromoSettings: () => void;
 
   // Custom added products
   customProducts: Product[];
@@ -337,6 +345,61 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       window.localStorage.removeItem(LOCAL_HERO_KEY);
     } catch {}
     showToast('Настройки афиши сброшены по умолчанию');
+  }, [showToast]);
+
+  const [promoSettings, setPromoSettings] = useState<PromoBannerSettings>(() => {
+    try {
+      const raw = window.localStorage.getItem(LOCAL_PROMO_KEY);
+      return raw ? { ...DEFAULT_PROMO_SETTINGS, ...JSON.parse(raw) } : DEFAULT_PROMO_SETTINGS;
+    } catch {
+      return DEFAULT_PROMO_SETTINGS;
+    }
+  });
+
+  // Cross-device sync: fetch deployed /data/promoSettings.json
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/data/promoSettings.json')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((remote: Partial<PromoBannerSettings> | null) => {
+        if (!cancelled && remote) {
+          setPromoSettings((prev) => {
+            const raw = window.localStorage.getItem(LOCAL_PROMO_KEY);
+            if (raw) {
+              try {
+                return { ...DEFAULT_PROMO_SETTINGS, ...remote, ...JSON.parse(raw) };
+              } catch {}
+            }
+            return { ...DEFAULT_PROMO_SETTINGS, ...remote };
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const updatePromoSettings = useCallback(
+    (settings: Partial<PromoBannerSettings>) => {
+      setPromoSettings((prev) => {
+        const next = { ...prev, ...settings };
+        try {
+          window.localStorage.setItem(LOCAL_PROMO_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      showToast('Настройки промо-строки сохранены');
+    },
+    [showToast]
+  );
+
+  const resetPromoSettings = useCallback(() => {
+    setPromoSettings(DEFAULT_PROMO_SETTINGS);
+    try {
+      window.localStorage.removeItem(LOCAL_PROMO_KEY);
+    } catch {}
+    showToast('Промо-строка сброшена по умолчанию');
   }, [showToast]);
 
   const [interestStats, setInterestStats] = useState<
@@ -1265,6 +1328,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     heroSettings,
     updateHeroSettings,
     resetHeroSettings,
+    promoSettings,
+    updatePromoSettings,
+    resetPromoSettings,
     customProducts,
     interestStats,
     recordProductInterest,

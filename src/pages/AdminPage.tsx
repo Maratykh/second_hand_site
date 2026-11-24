@@ -57,6 +57,9 @@ export const AdminPage: React.FC = () => {
     heroSettings,
     updateHeroSettings,
     resetHeroSettings,
+    promoSettings,
+    updatePromoSettings,
+    resetPromoSettings,
     interestStats,
   } = useStore();
 
@@ -83,6 +86,12 @@ export const AdminPage: React.FC = () => {
   const [heroBannerInput, setHeroBannerInput] = useState(heroSettings?.bannerImage || '');
   const [heroUploadLoading, setHeroUploadLoading] = useState(false);
 
+  // Promo announcement form states
+  const [promoEnabledInput, setPromoEnabledInput] = useState(promoSettings?.enabled ?? true);
+  const [promoBadgeInput, setPromoBadgeInput] = useState(promoSettings?.badge || '🔥 СВЕЖИЙ ДРОП');
+  const [promoTextInput, setPromoTextInput] = useState(promoSettings?.text || '');
+  const [promoLinkTextInput, setPromoLinkTextInput] = useState(promoSettings?.linkText || 'Смотреть каталог →');
+
   useEffect(() => {
     if (heroSettings) {
       setHeroBadgeInput(heroSettings.badge);
@@ -91,6 +100,15 @@ export const AdminPage: React.FC = () => {
       setHeroBannerInput(heroSettings.bannerImage);
     }
   }, [heroSettings]);
+
+  useEffect(() => {
+    if (promoSettings) {
+      setPromoEnabledInput(promoSettings.enabled);
+      setPromoBadgeInput(promoSettings.badge || '🔥 СВЕЖИЙ ДРОП');
+      setPromoTextInput(promoSettings.text);
+      setPromoLinkTextInput(promoSettings.linkText || 'Смотреть каталог →');
+    }
+  }, [promoSettings]);
 
   // Password change states
   const [newPassInput, setNewPassInput] = useState('');
@@ -260,6 +278,23 @@ export const AdminPage: React.FC = () => {
     });
   };
 
+  const handleSavePromo = (e: React.FormEvent) => {
+    e.preventDefault();
+    updatePromoSettings({
+      enabled: promoEnabledInput,
+      badge: promoBadgeInput.trim(),
+      text: promoTextInput.trim(),
+      linkText: promoLinkTextInput.trim(),
+    });
+  };
+
+  const handleApplyPromoPreset = (badge: string, text: string, link: string) => {
+    setPromoEnabledInput(true);
+    setPromoBadgeInput(badge);
+    setPromoTextInput(text);
+    setPromoLinkTextInput(link);
+  };
+
   const handleHeroFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -360,9 +395,12 @@ export const AdminPage: React.FC = () => {
                 <input
                   type="text"
                   required
+                  autoComplete="username"
+                  autoCorrect="off"
+                  autoCapitalize="none"
                   value={usernameInput}
                   onChange={(e) => setUsernameInput(e.target.value)}
-                  placeholder="admin или zombie"
+                  placeholder="Логин"
                   disabled={lockout.isLocked || loginLoading}
                   className="w-full bg-[#18181B] border border-zinc-700/80 pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#A3E635]"
                 />
@@ -446,7 +484,7 @@ export const AdminPage: React.FC = () => {
           <h1 className="font-display text-3xl sm:text-4xl font-bold text-white uppercase mt-2">
             {activeTab === 'inventory' && 'Инвентарь и склад'}
             {activeTab === 'analytics' && 'Аналитика и спрос'}
-            {activeTab === 'hero' && 'Настройка афиши и главной'}
+            {activeTab === 'hero' && 'Афиша, Главная & Промо-строка'}
             {activeTab === 'settings' && 'Безопасность и бэкап'}
           </h1>
         </div>
@@ -496,7 +534,7 @@ export const AdminPage: React.FC = () => {
               }`}
             >
               <ImageIcon className="w-3.5 h-3.5" />
-              <span>Афиша</span>
+              <span>Афиша & Акции</span>
             </button>
 
             <button
@@ -1076,6 +1114,194 @@ export const AdminPage: React.FC = () => {
                   className="px-4 py-3 bg-[#18181B] border border-zinc-700 hover:border-zinc-500 text-xs text-zinc-300 uppercase tracking-wider transition-colors cursor-pointer"
                 >
                   Сбросить по умолчанию
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* PROMO BANNER / ANNOUNCEMENT TICKER CONTROL */}
+          <div className="bg-[#111114] border border-zinc-800 p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Flame className="w-5 h-5 text-orange-400" />
+                  <h2 className="font-display text-xl font-bold text-white uppercase">
+                    Промо-строка акций и дропов
+                  </h2>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Управляйте неоновой строкой объявлений в самой верхней шапке сайта для всех посетителей.
+                </p>
+              </div>
+
+              {/* Status Pill & Switch */}
+              <label className="inline-flex items-center gap-3 cursor-pointer select-none self-start sm:self-auto bg-[#18181B] px-3.5 py-2 border border-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={promoEnabledInput}
+                  onChange={(e) => setPromoEnabledInput(e.target.checked)}
+                  className="sr-only"
+                />
+                <div
+                  className={`w-9 h-5 rounded-full transition-colors relative flex items-center ${
+                    promoEnabledInput ? 'bg-[#A3E635]' : 'bg-zinc-700'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-[#09090B] transition-transform ${
+                      promoEnabledInput ? 'translate-x-4' : 'translate-x-0.5'
+                    }`}
+                  />
+                </div>
+                <span
+                  className={`text-xs font-bold uppercase tracking-wider ${
+                    promoEnabledInput ? 'text-[#A3E635]' : 'text-zinc-400'
+                  }`}
+                >
+                  {promoEnabledInput ? 'Включена на сайте' : 'Выключена'}
+                </span>
+              </label>
+            </div>
+
+            {/* Live Preview Box */}
+            <div className="border border-zinc-700 p-4 bg-[#09090B] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-mono tracking-wider text-[#A3E635] font-bold">
+                  Живой предпросмотр в шапке сайта:
+                </span>
+                <span className="text-[11px] font-mono text-zinc-500">
+                  {promoEnabledInput ? 'Активно' : 'Скрыто'}
+                </span>
+              </div>
+
+              {promoEnabledInput ? (
+                <div className="bg-[#A3E635] text-[#09090B] px-4 py-2 text-xs font-semibold tracking-wide flex items-center justify-center gap-2 shadow-sm border border-lime-400">
+                  {promoBadgeInput && (
+                    <span className="bg-[#09090B] text-[#A3E635] text-[10px] font-mono uppercase px-2 py-0.5 font-bold tracking-wider shrink-0">
+                      {promoBadgeInput}
+                    </span>
+                  )}
+                  <span className="truncate max-w-[70vw] sm:max-w-none">
+                    {promoTextInput || 'Текст анонса или скидки появится здесь...'}
+                  </span>
+                  {promoLinkTextInput && (
+                    <span className="hidden sm:inline-flex underline underline-offset-2 font-bold ml-1 cursor-pointer shrink-0">
+                      {promoLinkTextInput}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="py-2.5 text-center text-xs text-zinc-500 border border-dashed border-zinc-800 bg-[#141417]/40">
+                  Промо-строка выключена (в шапке сайта будет чисто)
+                </div>
+              )}
+            </div>
+
+            {/* Quick Preset Buttons */}
+            <div className="space-y-2">
+              <span className="text-xs uppercase font-semibold text-zinc-400">
+                Быстрые шаблоны в 1 клик:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPromoPreset(
+                      '🔥 СВЕЖИЙ ДРОП',
+                      'Большое обновление курток, худи и свитшотов! Приходите на примерку на Хоружей 3',
+                      'Смотреть каталог →'
+                    )
+                  }
+                  className="px-3 py-1.5 bg-[#18181B] hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-200 transition-colors cursor-pointer"
+                >
+                  🔥 Свежий дроп
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPromoPreset(
+                      '⚡ СКИДКА 20%',
+                      'Скидка -20% на весь деним и брюки до конца недели! Количество вещей ограничено',
+                      'В каталог скидок →'
+                    )
+                  }
+                  className="px-3 py-1.5 bg-[#18181B] hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-200 transition-colors cursor-pointer"
+                >
+                  ⚡ Скидка на категорию
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPromoPreset(
+                      '📢 ШОУРУМ В МИНСКЕ',
+                      'Работаем ежедневно с 11:00 на ул. Веры Хоружей 3, оф. 308. Заходите на кофе и примерку!',
+                      'Контакты и адрес →'
+                    )
+                  }
+                  className="px-3 py-1.5 bg-[#18181B] hover:bg-zinc-800 border border-zinc-700 text-xs text-zinc-200 transition-colors cursor-pointer"
+                >
+                  📢 Шоурум и график
+                </button>
+              </div>
+            </div>
+
+            {/* Promo Form */}
+            <form onSubmit={handleSavePromo} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                <div className="sm:col-span-4 space-y-1.5">
+                  <label className="block text-xs uppercase font-semibold text-zinc-300">
+                    Бейдж акции (слева)
+                  </label>
+                  <input
+                    type="text"
+                    value={promoBadgeInput}
+                    onChange={(e) => setPromoBadgeInput(e.target.value)}
+                    placeholder="🔥 СВЕЖИЙ ДРОП"
+                    className="w-full bg-[#18181B] border border-zinc-700 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-[#A3E635]"
+                  />
+                </div>
+
+                <div className="sm:col-span-8 space-y-1.5">
+                  <label className="block text-xs uppercase font-semibold text-zinc-300">
+                    Текст ссылки / кнопки
+                  </label>
+                  <input
+                    type="text"
+                    value={promoLinkTextInput}
+                    onChange={(e) => setPromoLinkTextInput(e.target.value)}
+                    placeholder="Смотреть каталог →"
+                    className="w-full bg-[#18181B] border border-zinc-700 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-[#A3E635]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs uppercase font-semibold text-zinc-300">
+                  Текст объявления акции
+                </label>
+                <textarea
+                  rows={2}
+                  value={promoTextInput}
+                  onChange={(e) => setPromoTextInput(e.target.value)}
+                  placeholder="Введите текст акции или новость..."
+                  className="w-full bg-[#18181B] border border-zinc-700 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-[#A3E635]"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-zinc-800">
+                <button
+                  type="submit"
+                  className="px-6 py-3 bg-[#A3E635] text-[#09090B] font-bold text-xs uppercase tracking-wider hover:bg-lime-300 transition-colors cursor-pointer"
+                >
+                  Сохранить промо-строку
+                </button>
+
+                <button
+                  type="button"
+                  onClick={resetPromoSettings}
+                  className="px-4 py-3 bg-[#18181B] border border-zinc-700 hover:border-zinc-500 text-xs text-zinc-300 uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  Сбросить промо-строку
                 </button>
               </div>
             </form>
