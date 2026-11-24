@@ -62,7 +62,7 @@ const LOCAL_STOCK_OVERRIDES_KEY = 'zombie_stock_overrides_v1';
 const LOCAL_DELETED_KEY = 'zombie_deleted_products_v1';
 const LOCAL_OVERRIDES_KEY = 'zombie_product_overrides_v1';
 const LOCAL_CUSTOM_PRODUCTS_KEY = 'zombie_custom_products_v1';
-const LOCAL_HERO_KEY = 'zombie_hero_settings_v1';
+const LOCAL_HERO_KEY = 'zombie_hero_settings_v2';
 const LOCAL_PROMO_KEY = 'zombie_promo_settings_v1';
 const LOCAL_INTEREST_KEY = 'zombie_interest_stats_v1';
 
@@ -314,11 +314,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [heroSettings, setHeroSettings] = useState<HeroSettings>(() => {
     try {
-      const raw = window.localStorage.getItem(LOCAL_HERO_KEY);
+      const raw = window.localStorage.getItem(LOCAL_HERO_KEY) || window.localStorage.getItem('zombie_hero_settings_v1');
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed.bannerImage && parsed.bannerImage.includes('sun9-80.vkuserphoto.ru')) {
           parsed.bannerImage = '/assets/images/hero_banner.jpg';
+        }
+        if (!parsed.title || parsed.title.includes('без лишней наценки')) {
+          parsed.title = DEFAULT_HERO_SETTINGS.title;
+        }
+        if (!parsed.description || parsed.description.includes('честный деним') || parsed.description.includes('по доступным ценам')) {
+          parsed.description = DEFAULT_HERO_SETTINGS.description;
         }
         return { ...DEFAULT_HERO_SETTINGS, ...parsed };
       }
@@ -336,12 +342,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       .then((remote: Partial<HeroSettings> | null) => {
         if (!cancelled && remote) {
           setHeroSettings((prev) => {
-            const raw = window.localStorage.getItem(LOCAL_HERO_KEY);
+            const raw = window.localStorage.getItem(LOCAL_HERO_KEY) || window.localStorage.getItem('zombie_hero_settings_v1');
             if (raw) {
               try {
                 const parsed = JSON.parse(raw);
                 if (parsed.bannerImage && parsed.bannerImage.includes('sun9-80.vkuserphoto.ru')) {
                   parsed.bannerImage = remote.bannerImage || '/assets/images/hero_banner.jpg';
+                }
+                if (!parsed.title || parsed.title.includes('без лишней наценки')) {
+                  parsed.title = remote.title || DEFAULT_HERO_SETTINGS.title;
+                }
+                if (!parsed.description || parsed.description.includes('честный деним') || parsed.description.includes('по доступным ценам')) {
+                  parsed.description = remote.description || DEFAULT_HERO_SETTINGS.description;
                 }
                 return { ...DEFAULT_HERO_SETTINGS, ...remote, ...parsed };
               } catch {}
