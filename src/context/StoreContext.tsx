@@ -32,8 +32,6 @@ import type {
   ProductMeasurements,
   ProductSize,
   ProductStatus,
-  PromoBannerSettings,
-  DEFAULT_PROMO_SETTINGS,
 } from '../types/store';
 import { ADMIN_EMAIL, SCHEMA_LIMITS } from '../types/store';
 import {
@@ -81,6 +79,22 @@ export const DEFAULT_HERO_SETTINGS: HeroSettings = {
   title: 'Селективный винтаж без лишней наценки',
   description: 'Архивная кожа, тяжёлый хлопок 90-х и честный деним — в одном экземпляре.',
   bannerImage: '/assets/images/hero_banner.jpg',
+};
+
+export interface PromoBannerSettings {
+  enabled: boolean;
+  text: string;
+  badge?: string;
+  linkText?: string;
+  linkUrl?: string;
+}
+
+export const DEFAULT_PROMO_SETTINGS: PromoBannerSettings = {
+  enabled: true,
+  badge: '🔥 СВЕЖИЙ ДРОП',
+  text: 'Большой завоз архивных курток и свитшотов! Ждём на примерку на ул. Веры Хоружей 3',
+  linkText: 'Смотреть каталог →',
+  linkUrl: '#/catalog',
 };
 
 interface StoreContextValue {
