@@ -175,9 +175,19 @@ const vercelJson = JSON.parse(vercelRaw);
 const hasSpaRewrite = vercelJson.rewrites?.some((r: any) => r.source === '/(.*)' && r.destination === '/index.html');
 assert(hasSpaRewrite, 'vercel.json настроен с перенаправлением /(.*) -> /index.html (защита от 404 при F5)');
 
-console.log('\n--- 6. AUDIT SUBCATEGORIES (Кроссовки отдельно, Майки и Поло отдельно) ---');
+console.log('\n--- 6. AUDIT SUBCATEGORIES (Кроссовки, Рубашки, Майки, Спортштаны) ---');
 assert(PRODUCT_CATEGORIES.some((c) => c.key === 'shoes'), 'Категория «Кроссовки» выделена отдельно в главном меню');
+assert(PRODUCT_CATEGORIES.some((c) => c.key === 'shirts'), 'Категория «Рубашки» выделена отдельно в главном меню');
 assert(PRODUCT_CATEGORIES.some((c) => c.key === 'accessories'), 'Категория «Аксессуары» отделена от кроссовок');
+
+// Shirts sub-tabs test
+const shirtsSubs = CATEGORY_SUBCATEGORIES.shirts;
+const hasHawaiian = shirtsSubs.some((s) => s.key === 'hawaiian');
+assert(hasHawaiian, 'Подвкладка «Гавайские» выделена в рубашках');
+const shirtClassicMatch = shirtsSubs.find((s) => s.key === 'classic')?.match('Рубашка Gant', '');
+const hawaiianMatch = shirtsSubs.find((s) => s.key === 'hawaiian')?.match('Гавайская рубашка Ragazzi', '');
+assert(Boolean(shirtClassicMatch), 'Подвкладка «Классика & Оксфорд» корректно определяет рубашки Gant');
+assert(Boolean(hawaiianMatch), 'Подвкладка «Гавайские» корректно определяет гавайские рубашки');
 
 const tshirtsSubs = CATEGORY_SUBCATEGORIES.tshirts;
 const hasMaiki = tshirtsSubs.some((s) => s.key === 'maiki');

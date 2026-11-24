@@ -90,6 +90,8 @@ export function parseVkItemDescription(
   const lowerText = (title + ' ' + clean).toLowerCase();
   if (/кроссов|кеды|обувь|ботинк|тапки|сланцы|сникеры|sneakers|boots/i.test(lowerText)) {
     category = 'shoes';
+  } else if (/рубашк|гавайск|шведка/i.test(lowerText) && !/куртка-рубашка/i.test(lowerText)) {
+    category = 'shirts';
   } else if (/шопер|шоппер|рюкзак|сумк|очки|кольцо|кепи|кепк|шапк|баф|бафф|buff|снуд|шарф|перчатк|варежк|носки|повязк|ремень|аксессуар|браслет|значок/i.test(lowerText)) {
     category = 'accessories';
   } else if (/свитшот|худи|байк|толстовк|кардиган|кофт|флис|олимпийк|джемпер|пуловер|водолазк/i.test(lowerText)) {

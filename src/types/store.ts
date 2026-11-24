@@ -1,8 +1,9 @@
 export type ProductCategory =
   | 'jackets'
+  | 'shirts'
   | 'tshirts'
-  | 'pants'
   | 'hoodies'
+  | 'pants'
   | 'shoes'
   | 'accessories';
 
@@ -110,6 +111,7 @@ export const ADMIN_EMAIL = 'gotdehgot@gmail.com';
 
 export const PRODUCT_CATEGORIES: { key: ProductCategory; label: string }[] = [
   { key: 'jackets', label: 'Куртки' },
+  { key: 'shirts', label: 'Рубашки' },
   { key: 'tshirts', label: 'Футболки и майки' },
   { key: 'hoodies', label: 'Худи и свитшоты' },
   { key: 'pants', label: 'Джинсы и брюки' },
@@ -119,6 +121,7 @@ export const PRODUCT_CATEGORIES: { key: ProductCategory; label: string }[] = [
 
 export const CATEGORY_LABELS: Record<ProductCategory, string> = {
   jackets: 'Куртки',
+  shirts: 'Рубашки',
   tshirts: 'Футболки и майки',
   hoodies: 'Худи и свитшоты',
   pants: 'Джинсы и брюки',
@@ -133,6 +136,31 @@ export interface SubCategoryDef {
 }
 
 export const CATEGORY_SUBCATEGORIES: Record<ProductCategory, SubCategoryDef[]> = {
+  shirts: [
+    {
+      key: 'classic',
+      label: 'Классика & Оксфорд',
+      match: (t) =>
+        /gant|ralph|tommy|burberry|lacoste|barbour|paul smith|boss|dressman|tailor|fuxiaopan|zornica|s\.oliver/i.test(t) ||
+        !/гавайск|куртка-рубашка|dickies|vans|dc|acne|nudie|wrangler|lee|edhardy/i.test(t),
+    },
+    {
+      key: 'hawaiian',
+      label: 'Гавайские',
+      match: (t) => /гавайск/i.test(t),
+    },
+    {
+      key: 'casual',
+      label: 'Casual & Деним',
+      match: (t) =>
+        /lee|wrangler|dickies|vans|hollister|pull&bear|dc|acne|nudie|edhardy|saturdays|ben sherman/i.test(t),
+    },
+    {
+      key: 'overshirts',
+      label: 'Куртки-рубашки',
+      match: (t) => /куртка-рубашка/i.test(t),
+    },
+  ],
   tshirts: [
     {
       key: 'maiki',
