@@ -11,7 +11,6 @@ import {
   isVkAlbumsListUrl,
   parseVkAlbumInput,
 } from './src/utils/vkAlbumParser.ts';
-import { fetchDecodedProductPhoto } from './api/_lib/firebaseRest.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -20,18 +19,25 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 const DEFAULT_VK_OWNER_ID = process.env.VK_OWNER_ID || '-139575762';
 const ADMIN_EMAIL = 'gotdehgot@gmail.com';
 
-function loadFirebaseApiKey(): string | null {
+function loadFirebaseConfig(): { projectId?: string; apiKey?: string; firestoreDatabaseId?: string } {
   try {
     const configPath = path.resolve(__dirname, 'firebase-applet-config.json');
-    if (!fs.existsSync(configPath)) return null;
-    const raw = JSON.parse(fs.readFileSync(configPath, 'utf8')) as { apiKey?: string };
-    return typeof raw.apiKey === 'string' && raw.apiKey.length > 10 ? raw.apiKey : null;
+    if (!fs.existsSync(configPath)) return {};
+    return JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
+      projectId?: string;
+      apiKey?: string;
+      firestoreDatabaseId?: string;
+    };
   } catch {
-    return null;
+    return {};
   }
 }
 
-const FIREBASE_API_KEY = loadFirebaseApiKey();
+const FIREBASE_CFG = loadFirebaseConfig();
+const FIREBASE_API_KEY =
+  typeof FIREBASE_CFG.apiKey === 'string' && FIREBASE_CFG.apiKey.length > 10
+    ? FIREBASE_CFG.apiKey
+    : null;
 
 interface AuthenticatedRequest extends Request {
   adminUser?: { uid: string; email: string };
@@ -250,16 +256,29 @@ async function createServer() {
   });
 
   app.get('/api/photo', async (req, res) => {
-    const rawId = typeof req.query.id === 'string' ? req.query.id : undefined;
+    const rawId = typeof req.query.id === 'string' ? req.query.id : '';
+    if (!/^[a-zA-Z0-9_-]{3,128}$/.test(rawId) || !FIREBASE_CFG.projectId || !FIREBASE_API_KEY) {
+      res.status(400).end('Invalid photo ID');
+      return;
+    }
     try {
-      const result = await fetchDecodedProductPhoto(rawId);
-      if (!result.ok) {
-        res.status(result.status).end(result.message);
+      const dbId = FIREBASE_CFG.firestoreDatabaseId || '(default)';
+      const docUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CFG.projectId}/databases/${dbId}/documents/product_photos/${encodeURIComponent(rawId)}?key=${encodeURIComponent(FIREBASE_API_KEY)}`;
+      const fsRes = await fetch(docUrl);
+      if (!fsRes.ok) {
+        res.status(fsRes.status === 404 ? 404 : 502).end('Not Found');
         return;
       }
-      res.setHeader('Content-Type', result.mimeType);
+      const docJson = (await fsRes.json()) as { fields?: { dataUrl?: { stringValue?: string } } };
+      const dataUrl = docJson.fields?.dataUrl?.stringValue || '';
+      const m = dataUrl.match(/^data:(image\/(?:webp|jpeg|jpg|png|gif));base64,([A-Za-z0-9+/=]+)$/i);
+      if (!m) {
+        res.status(404).end('Invalid photo payload');
+        return;
+      }
+      res.setHeader('Content-Type', m[1].toLowerCase() === 'image/jpg' ? 'image/jpeg' : m[1].toLowerCase());
       res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
-      res.send(result.buffer);
+      res.send(Buffer.from(m[2], 'base64'));
     } catch {
       res.status(500).end('Internal Error');
     }
