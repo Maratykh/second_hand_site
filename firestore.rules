@@ -188,14 +188,35 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // --- Document: /metadata/catalog_state (Global real-time stock, overrides, hero & promo) ---
+    // --- Document: /metadata/* (Global real-time stock, overrides, hero, promo & compact feed) ---
     match /metadata/{docId} {
-      allow get: if docId == 'catalog_state';
+      allow get: if docId == 'catalog_state' ||
+        docId == 'catalog_feed' ||
+        docId.matches('^catalog_feed_[0-9]+$');
       allow list: if false;
-      allow create, update: if docId == 'catalog_state' &&
-        !('adminHash' in incoming()) &&
-        isAnyAdmin();
+      allow create, update: if (
+        (docId == 'catalog_state' && !('adminHash' in incoming())) ||
+        docId == 'catalog_feed' ||
+        docId.matches('^catalog_feed_[0-9]+$')
+      ) && isAnyAdmin();
       allow delete: if false;
+    }
+
+    // --- Collection: /product_photos/{photoId} (Immutable compressed WebP/JPEG payloads cached at Edge CDN) ---
+    match /product_photos/{photoId} {
+      allow get: if isValidId(photoId);
+      allow list: if false;
+      allow create: if isValidId(photoId) &&
+        isAnyAdmin() &&
+        incoming().keys().hasAll(['dataUrl', 'mimeType', 'createdAt']) &&
+        incoming().keys().hasOnly(['dataUrl', 'mimeType', 'createdAt']) &&
+        incoming().dataUrl is string &&
+        incoming().dataUrl.size() >= 30 &&
+        incoming().dataUrl.size() <= 280000 &&
+        incoming().mimeType in ['image/webp', 'image/jpeg', 'image/png'] &&
+        incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(photoId) && isAnyAdmin();
     }
 
     // --- Collection: /products/{productId} ---

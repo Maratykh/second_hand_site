@@ -227,12 +227,36 @@
         }
       },
       "required": ["uid", "email", "createdAt"]
+    },
+    "ProductPhoto": {
+      "title": "ProductPhoto",
+      "description": "Immutable compressed product image payload cached via Edge CDN.",
+      "type": "object",
+      "properties": {
+        "dataUrl": {
+          "type": "string",
+          "maxLength": 280000
+        },
+        "mimeType": {
+          "type": "string",
+          "enum": ["image/webp", "image/jpeg", "image/png"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["dataUrl", "mimeType", "createdAt"]
     }
   },
   "firestore": {
     "/products/{productId}": {
       "schema": { "$ref": "#/entities/Product" },
       "description": "Catalog products: published items are publicly readable; drafts and all writes are admin-only."
+    },
+    "/product_photos/{photoId}": {
+      "schema": { "$ref": "#/entities/ProductPhoto" },
+      "description": "Immutable compressed product images served through CDN-cached /api/photo."
     },
     "/orders/{orderId}": {
       "schema": { "$ref": "#/entities/Order" },

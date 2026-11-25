@@ -101,16 +101,30 @@ export const AdminProductEditPage: React.FC<AdminProductEditPageProps> = ({
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
     setError(null);
     setUploading(true);
 
     try {
-      const url = await uploadProductImage(file);
-      if (url) {
-        setImagesText((prev) => (prev.trim() ? `${prev.trim()}\n${url}` : url));
-        showToast('Фото обработано и добавлено');
+      const remainingSlots = Math.max(1, SCHEMA_LIMITS.productImagesMax - parsedPreviewImages.length);
+      const selected = files.slice(0, remainingSlots);
+      const uploadedUrls: string[] = [];
+      for (const file of selected) {
+        const url = await uploadProductImage(file);
+        if (url) uploadedUrls.push(url);
+      }
+      if (uploadedUrls.length > 0) {
+        setImagesText((prev) => {
+          const base = prev.trim();
+          const joined = uploadedUrls.join('\n');
+          return base ? `${base}\n${joined}` : joined;
+        });
+        showToast(
+          uploadedUrls.length > 1
+            ? `Загружено фото: ${uploadedUrls.length} шт.`
+            : 'Фото обработано и загружено'
+        );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось загрузить выбранное фото.');
@@ -607,6 +621,7 @@ export const AdminProductEditPage: React.FC<AdminProductEditPageProps> = ({
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   disabled={uploading}
                   onChange={handleFileUpload}
                   className="sr-only"

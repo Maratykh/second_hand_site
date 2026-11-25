@@ -5,6 +5,7 @@ import {
   buildDraftProductFromVkPhoto,
   buildProductDownloadFilename,
   calculateCartSummary,
+  extractApiPhotoId,
   extractVkPhotosFromAlPhotosPayload,
   extractVkPublicAlbumPhotoUrls,
   filterAndSortProducts,
@@ -141,6 +142,11 @@ test('sanitizeImageUrl allows safe local/https/data-image urls and blocks javasc
   assert.equal(sanitizeImageUrl('/assets/../secrets.json'), null);
   assert.equal(sanitizeImageUrl('/src/assets/images/test.jpg'), '/src/assets/images/test.jpg');
   assert.equal(sanitizeImageUrl('/assets/products/tg-1.webp'), '/assets/products/tg-1.webp');
+  assert.equal(sanitizeImageUrl('/api/photo?id=img_m8x9abc_1234'), '/api/photo?id=img_m8x9abc_1234');
+  assert.equal(sanitizeImageUrl('/api/photo?id=../secret'), null);
+  assert.equal(sanitizeImageUrl('/api/photo?id=abc&extra=1'), null);
+  assert.equal(extractApiPhotoId('/api/photo?id=img_m8x9abc_1234'), 'img_m8x9abc_1234');
+  assert.equal(extractApiPhotoId('/assets/products/tg-1.webp'), null);
   assert.equal(
     sanitizeImageUrl('data:image/jpeg;base64,/9j/4AAQSkZJRg=='),
     'data:image/jpeg;base64,/9j/4AAQSkZJRg=='

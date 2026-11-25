@@ -41,7 +41,6 @@ import { SafeImage } from '../components/SafeImage';
 import { AdminProductFormModal } from '../components/admin/AdminProductFormModal';
 import { AdminProductEditPage } from '../components/admin/AdminProductEditPage';
 import { getLockoutStatus } from '../utils/adminAuth';
-import { compressImageFileToDataUrl } from '../utils/imageUpload';
 import type { AppRoute } from '../components/Header';
 
 type AdminTab = 'inventory' | 'analytics' | 'hero' | 'settings';
@@ -63,6 +62,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
     setProductStatus,
     resetAllStockOverrides,
     deleteProduct,
+    uploadProductImage,
     showToast,
     heroSettings,
     updateHeroSettings,
@@ -323,9 +323,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ editProductId, onNavigate 
     if (!file) return;
     setHeroUploadLoading(true);
     try {
-      const compressed = await compressImageFileToDataUrl(file, { maxDim: 1280, quality: 0.8 });
-      setHeroBannerInput(compressed);
-      showToast('Фото афиши готово к сохранению');
+      const url = await uploadProductImage(file, { maxDim: 1280, quality: 0.78 });
+      setHeroBannerInput(url);
+      showToast('Фото афиши загружено и готово к сохранению');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Не удалось обработать фото');
     } finally {

@@ -242,7 +242,13 @@ export function generateOrderNumber(now = new Date()): string {
 }
 
 const SAFE_DATA_IMAGE_RE = /^data:image\/(?:jpeg|jpg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/i;
+const SAFE_API_PHOTO_RE = /^\/api\/photo\?id=[a-zA-Z0-9_-]{3,128}$/;
 const MAX_DATA_IMAGE_LENGTH = 450_000;
+
+export function extractApiPhotoId(url: string): string | null {
+  const match = url.trim().match(/^\/api\/photo\?id=([a-zA-Z0-9_-]{3,128})$/);
+  return match ? match[1] : null;
+}
 
 export function sanitizeImageUrl(url: string): string | null {
   const trimmed = url.trim();
@@ -253,6 +259,10 @@ export function sanitizeImageUrl(url: string): string | null {
   }
 
   if (trimmed.length > 1000) return null;
+
+  if (SAFE_API_PHOTO_RE.test(trimmed)) {
+    return trimmed;
+  }
 
   if (
     (trimmed.startsWith('/assets/') || trimmed.startsWith('/src/assets/')) &&

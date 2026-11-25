@@ -11,6 +11,7 @@ import {
   isVkAlbumsListUrl,
   parseVkAlbumInput,
 } from './src/utils/vkAlbumParser.ts';
+import { fetchDecodedProductPhoto } from './api/_lib/firebaseRest.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -246,6 +247,22 @@ async function createServer() {
 
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, service: 'lavka-zombie-api' });
+  });
+
+  app.get('/api/photo', async (req, res) => {
+    const rawId = typeof req.query.id === 'string' ? req.query.id : undefined;
+    try {
+      const result = await fetchDecodedProductPhoto(rawId);
+      if (!result.ok) {
+        res.status(result.status).end(result.message);
+        return;
+      }
+      res.setHeader('Content-Type', result.mimeType);
+      res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+      res.send(result.buffer);
+    } catch {
+      res.status(500).end('Internal Error');
+    }
   });
 
   // Simple public VK album photo importer (no service token, extracts public photo URLs only)

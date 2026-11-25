@@ -21,10 +21,9 @@ import {
   arrayUnion,
   type WriteBatch,
 } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { auth, db, googleProvider, handleFirestoreError, OperationType, storage } from '../lib/firebase';
-import { compressImageFileToDataUrl } from '../utils/imageUpload';
+import { auth, db, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
+import { compressImageFileToDataUrl, extractDataUrlMime } from '../utils/imageUpload';
 import { SEED_PRODUCTS } from '../data/seedProducts';
 import type {
   CartItem,
@@ -43,6 +42,7 @@ import {
   buildDraftProductFromVkPhoto,
   buildDraftProductFromVkItem,
   calculateCartSummary,
+  extractApiPhotoId,
   generateOrderNumber,
   removeFromCartList,
   sanitizeImageUrl,
@@ -57,6 +57,15 @@ import {
   changeAdminPassword as changeAdminPassUtil,
   getAdminHash,
 } from '../utils/adminAuth';
+import {
+  buildFeedProductList,
+  decodeFeedItems,
+  decodeFirestoreValue,
+  selectFeedShardForProduct,
+  uploadImageViaApiEndpoint,
+  type FeedProductEntry,
+  type FirestoreRestValue,
+} from '../utils/catalogSync';
 
 const LOCAL_CART_KEY = 'lavka_zombie_cart_v1';
 const LOCAL_ORDERS_KEY = 'lavka_zombie_recent_orders_v1';
@@ -66,6 +75,7 @@ const LOCAL_WISHLIST_KEY = 'lavka_zombie_wishlist_v1';
 const LOCAL_STOCK_OVERRIDES_KEY = 'zombie_stock_overrides_v1';
 const LOCAL_DELETED_KEY = 'zombie_deleted_products_v1';
 const LOCAL_OVERRIDES_KEY = 'zombie_product_overrides_v1';
+const LOCAL_FEED_KEY = 'zombie_catalog_feed_v1';
 const LOCAL_CUSTOM_PRODUCTS_KEY = 'zombie_custom_products_v1';
 const LOCAL_HERO_KEY = 'zombie_hero_settings_v2';
 const LOCAL_PROMO_KEY = 'zombie_promo_settings_v1';
@@ -128,7 +138,10 @@ interface StoreContextValue {
   setProductStatus: (productId: string, status: ProductStatus) => Promise<void>;
   setProductInStock: (productId: string, inStock: boolean) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
-  uploadProductImage: (file: File) => Promise<string>;
+  uploadProductImage: (
+    file: File,
+    options?: { maxDim?: number; quality?: number }
+  ) => Promise<string>;
   importVkDrafts: (imageUrls: string[]) => Promise<number>;
   importVkItems: (
     items: Array<{
@@ -225,39 +238,6 @@ function createSafeDocId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${random}`.replace(/[^a-zA-Z0-9_-]/g, '');
 }
 
-type FirestoreRestValue = {
-  stringValue?: string;
-  booleanValue?: boolean;
-  integerValue?: string;
-  doubleValue?: number;
-  nullValue?: null;
-  timestampValue?: string;
-  arrayValue?: { values?: FirestoreRestValue[] };
-  mapValue?: { fields?: Record<string, FirestoreRestValue> };
-};
-
-function decodeFirestoreValue(val: FirestoreRestValue | undefined): unknown {
-  if (!val || typeof val !== 'object') return undefined;
-  if ('stringValue' in val) return val.stringValue;
-  if ('booleanValue' in val) return Boolean(val.booleanValue);
-  if ('integerValue' in val) return Number(val.integerValue);
-  if ('doubleValue' in val) return Number(val.doubleValue);
-  if ('timestampValue' in val) return val.timestampValue;
-  if ('nullValue' in val) return null;
-  if ('arrayValue' in val) {
-    return (val.arrayValue?.values || []).map(decodeFirestoreValue).filter((v) => v !== undefined);
-  }
-  if ('mapValue' in val) {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(val.mapValue?.fields || {})) {
-      const decoded = decodeFirestoreValue(v);
-      if (decoded !== undefined) out[k] = decoded;
-    }
-    return out;
-  }
-  return undefined;
-}
-
 function isPermissionDeniedError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false;
   const code = (err as { code?: string }).code || '';
@@ -323,6 +303,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [deployedCustomProducts, setDeployedCustomProducts] = useState<Product[]>([]);
   const hasRemoteCatalogRef = useRef(false);
 
+  const [feedItemsMap, setFeedItemsMap] = useState<Record<string, FeedProductEntry>>(() => {
+    try {
+      const raw = window.localStorage.getItem(LOCAL_FEED_KEY);
+      return raw ? decodeFeedItems(JSON.parse(raw)) : {};
+    } catch {
+      return {};
+    }
+  });
+  const feedItemsMapRef = useRef(feedItemsMap);
+  feedItemsMapRef.current = feedItemsMap;
+
+  const [feedOverflowMap, setFeedOverflowMap] = useState<Record<string, FeedProductEntry>>({});
+  const feedOverflowMapRef = useRef(feedOverflowMap);
+  feedOverflowMapRef.current = feedOverflowMap;
+
+  const [hasFeedOverflow, setHasFeedOverflow] = useState(false);
+  const [seedLoaded, setSeedLoaded] = useState(false);
+  const [feedLoaded, setFeedLoaded] = useState(false);
+
   const commitCatalogBatch = useCallback(
     async (configure: (batch: WriteBatch) => void) => {
       const adminHash = getAdminHash();
@@ -372,172 +371,167 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, []);
 
-  // Cross-device Realtime Sync via Firestore for ALL visitors
+  const applyCatalogStateData = useCallback((data: Record<string, unknown>) => {
+    hasRemoteCatalogRef.current = true;
+    const nextStock =
+      data.stockOverrides && typeof data.stockOverrides === 'object'
+        ? (data.stockOverrides as Record<string, boolean>)
+        : {};
+    setStockOverrides(nextStock);
+    try {
+      window.localStorage.setItem(LOCAL_STOCK_OVERRIDES_KEY, JSON.stringify(nextStock));
+    } catch {}
+
+    const nextDeleted = Array.isArray(data.deletedIds) ? (data.deletedIds as string[]) : [];
+    setDeletedIds(nextDeleted);
+    try {
+      window.localStorage.setItem(LOCAL_DELETED_KEY, JSON.stringify(nextDeleted));
+    } catch {}
+
+    const nextProductOverrides =
+      data.productOverrides && typeof data.productOverrides === 'object'
+        ? (data.productOverrides as Record<string, Partial<Product>>)
+        : {};
+    setProductOverrides(nextProductOverrides);
+    try {
+      window.localStorage.setItem(LOCAL_OVERRIDES_KEY, JSON.stringify(nextProductOverrides));
+    } catch {}
+
+    if (data.heroSettings && typeof data.heroSettings === 'object') {
+      setHeroSettings((prev) => {
+        const next = { ...prev, ...(data.heroSettings as Partial<HeroSettings>) };
+        try {
+          window.localStorage.setItem(LOCAL_HERO_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    }
+    if (data.promoSettings && typeof data.promoSettings === 'object') {
+      setPromoSettings((prev) => {
+        const next = { ...prev, ...(data.promoSettings as Partial<PromoBannerSettings>) };
+        try {
+          window.localStorage.setItem(LOCAL_PROMO_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    }
+    if (data.customProducts && typeof data.customProducts === 'object') {
+      setFirestoreCustomProducts(Object.values(data.customProducts) as Product[]);
+    } else {
+      setFirestoreCustomProducts([]);
+    }
+  }, []);
+
+  const applyPrimaryFeedData = useCallback((data: Record<string, unknown> | null) => {
+    const items = decodeFeedItems(data?.items);
+    setFeedItemsMap(items);
+    setHasFeedOverflow(Boolean(data?.hasNext));
+    try {
+      window.localStorage.setItem(LOCAL_FEED_KEY, JSON.stringify(items));
+    } catch {}
+    setFeedLoaded(true);
+  }, []);
+
+  // Cross-device Realtime Sync via single-doc metadata/catalog_state & metadata/catalog_feed
+  // (REST fallback fires ONLY if onSnapshot fails to connect within 2.5s, saving 50% of reads)
   useEffect(() => {
     const dbId = firebaseConfig.firestoreDatabaseId || '(default)';
-    const fsUrl = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${dbId}/documents/metadata/catalog_state?key=${encodeURIComponent(firebaseConfig.apiKey)}`;
-    const productsQueryUrl = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${dbId}/documents:runQuery?key=${encodeURIComponent(firebaseConfig.apiKey)}`;
+    const stateUrl = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${dbId}/documents/metadata/catalog_state?key=${encodeURIComponent(firebaseConfig.apiKey)}`;
+    const feedUrl = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${dbId}/documents/metadata/catalog_feed?key=${encodeURIComponent(firebaseConfig.apiKey)}`;
 
-    fetch(fsUrl)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!data || !data.fields) return;
-        hasRemoteCatalogRef.current = true;
+    let stateSeen = false;
+    let feedSeen = false;
+    let unmounted = false;
 
-        const decodedStock = decodeFirestoreValue(data.fields.stockOverrides) as Record<string, boolean> | undefined;
-        if (decodedStock && typeof decodedStock === 'object') {
-          setStockOverrides(decodedStock);
-          try {
-            window.localStorage.setItem(LOCAL_STOCK_OVERRIDES_KEY, JSON.stringify(decodedStock));
-          } catch {}
-        }
-
-        const decodedDeleted = decodeFirestoreValue(data.fields.deletedIds) as string[] | undefined;
-        if (Array.isArray(decodedDeleted)) {
-          setDeletedIds(decodedDeleted);
-          try {
-            window.localStorage.setItem(LOCAL_DELETED_KEY, JSON.stringify(decodedDeleted));
-          } catch {}
-        }
-
-        const decodedProductOverrides = decodeFirestoreValue(data.fields.productOverrides) as Record<string, Partial<Product>> | undefined;
-        if (decodedProductOverrides && typeof decodedProductOverrides === 'object') {
-          setProductOverrides(decodedProductOverrides);
-          try {
-            window.localStorage.setItem(LOCAL_OVERRIDES_KEY, JSON.stringify(decodedProductOverrides));
-          } catch {}
-        }
-
-        const decodedCustom = decodeFirestoreValue(data.fields.customProducts) as Record<string, Product> | undefined;
-        if (decodedCustom && typeof decodedCustom === 'object') {
-          setFirestoreCustomProducts(Object.values(decodedCustom));
-        }
-
-        const decodedHero = decodeFirestoreValue(data.fields.heroSettings) as Partial<HeroSettings> | undefined;
-        if (decodedHero && typeof decodedHero === 'object') {
-          setHeroSettings((prev) => {
-            const next = { ...prev, ...decodedHero };
-            try {
-              window.localStorage.setItem(LOCAL_HERO_KEY, JSON.stringify(next));
-            } catch {}
-            return next;
+    const fallbackTimer = window.setTimeout(() => {
+      if (unmounted) return;
+      if (!stateSeen) {
+        fetch(stateUrl)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((docJson) => {
+            if (!unmounted && !stateSeen && docJson?.fields) {
+              const decoded = decodeFirestoreValue({ mapValue: { fields: docJson.fields } }) as Record<string, unknown> | undefined;
+              if (decoded) applyCatalogStateData(decoded);
+            }
+          })
+          .catch(() => {});
+      }
+      if (!feedSeen) {
+        fetch(feedUrl)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((docJson) => {
+            if (!unmounted && !feedSeen) {
+              const decoded = docJson?.fields
+                ? (decodeFirestoreValue({ mapValue: { fields: docJson.fields } }) as Record<string, unknown> | undefined)
+                : null;
+              applyPrimaryFeedData(decoded || null);
+            }
+          })
+          .catch(() => {
+            if (!unmounted) setFeedLoaded(true);
           });
-        }
+      }
+    }, 2500);
 
-        const decodedPromo = decodeFirestoreValue(data.fields.promoSettings) as Partial<PromoBannerSettings> | undefined;
-        if (decodedPromo && typeof decodedPromo === 'object') {
-          setPromoSettings((prev) => {
-            const next = { ...prev, ...decodedPromo };
-            try {
-              window.localStorage.setItem(LOCAL_PROMO_KEY, JSON.stringify(next));
-            } catch {}
-            return next;
-          });
-        }
-      })
-      .catch((e) => console.warn('Immediate Firestore REST fetch fallback:', e));
-
-    // Also run immediate REST query for published custom/edited products
-    fetch(productsQueryUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        structuredQuery: {
-          from: [{ collectionId: 'products' }],
-          where: {
-            fieldFilter: {
-              field: { fieldPath: 'status' },
-              op: 'EQUAL',
-              value: { stringValue: 'published' },
-            },
-          },
-        },
-      }),
-    })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((rows: Array<{ document?: { name: string; fields: Record<string, FirestoreRestValue> } }>) => {
-        if (!Array.isArray(rows)) return;
-        const loaded: Product[] = [];
-        for (const row of rows) {
-          if (!row.document?.fields) continue;
-          const id = row.document.name.split('/').pop() || '';
-          const decoded = decodeFirestoreValue({ mapValue: { fields: row.document.fields } }) as Omit<Product, 'id'> | undefined;
-          if (id && decoded) {
-            loaded.push({ id, ...decoded });
-          }
-        }
-        if (loaded.length > 0) {
-          setPublishedFirestoreProducts((prev) => (prev.length > 0 ? prev : loaded));
-        }
-      })
-      .catch(() => {});
+    let unsubState: (() => void) | undefined;
+    let unsubFeed: (() => void) | undefined;
 
     try {
-      const docRef = doc(db, 'metadata', 'catalog_state');
-      const unsub = onSnapshot(
-        docRef,
+      unsubState = onSnapshot(
+        doc(db, 'metadata', 'catalog_state'),
         (snap) => {
+          stateSeen = true;
           if (snap.exists()) {
-            hasRemoteCatalogRef.current = true;
-            const data = snap.data();
-            const nextStock =
-              data.stockOverrides && typeof data.stockOverrides === 'object'
-                ? (data.stockOverrides as Record<string, boolean>)
-                : {};
-            setStockOverrides(nextStock);
-            try {
-              window.localStorage.setItem(LOCAL_STOCK_OVERRIDES_KEY, JSON.stringify(nextStock));
-            } catch {}
-
-            const nextDeleted = Array.isArray(data.deletedIds) ? (data.deletedIds as string[]) : [];
-            setDeletedIds(nextDeleted);
-            try {
-              window.localStorage.setItem(LOCAL_DELETED_KEY, JSON.stringify(nextDeleted));
-            } catch {}
-
-            const nextProductOverrides =
-              data.productOverrides && typeof data.productOverrides === 'object'
-                ? (data.productOverrides as Record<string, Partial<Product>>)
-                : {};
-            setProductOverrides(nextProductOverrides);
-            try {
-              window.localStorage.setItem(LOCAL_OVERRIDES_KEY, JSON.stringify(nextProductOverrides));
-            } catch {}
-
-            if (data.heroSettings && typeof data.heroSettings === 'object') {
-              setHeroSettings((prev) => {
-                const next = { ...prev, ...data.heroSettings };
-                try {
-                  window.localStorage.setItem(LOCAL_HERO_KEY, JSON.stringify(next));
-                } catch {}
-                return next;
-              });
-            }
-            if (data.promoSettings && typeof data.promoSettings === 'object') {
-              setPromoSettings((prev) => {
-                const next = { ...prev, ...data.promoSettings };
-                try {
-                  window.localStorage.setItem(LOCAL_PROMO_KEY, JSON.stringify(next));
-                } catch {}
-                return next;
-              });
-            }
-            if (data.customProducts && typeof data.customProducts === 'object') {
-              setFirestoreCustomProducts(Object.values(data.customProducts) as Product[]);
-            } else {
-              setFirestoreCustomProducts([]);
-            }
+            applyCatalogStateData(snap.data() as Record<string, unknown>);
           }
         },
         (err) => {
           console.warn('Realtime catalog_state sync warning:', err);
         }
       );
-      return () => unsub();
+
+      unsubFeed = onSnapshot(
+        doc(db, 'metadata', 'catalog_feed'),
+        (snap) => {
+          feedSeen = true;
+          applyPrimaryFeedData(snap.exists() ? (snap.data() as Record<string, unknown>) : null);
+        },
+        (err) => {
+          console.warn('Realtime catalog_feed sync warning:', err);
+          setFeedLoaded(true);
+        }
+      );
     } catch (e) {
       console.warn('Realtime sync setup error:', e);
+      setFeedLoaded(true);
     }
-  }, []);
+
+    return () => {
+      unmounted = true;
+      window.clearTimeout(fallbackTimer);
+      unsubState?.();
+      unsubFeed?.();
+    };
+  }, [applyCatalogStateData, applyPrimaryFeedData]);
+
+  // Subscribe to overflow shard ONLY when primary feed exceeds 650 KB (~900+ new items)
+  useEffect(() => {
+    if (!hasFeedOverflow) {
+      setFeedOverflowMap({});
+      return;
+    }
+
+    const unsub = onSnapshot(
+      doc(db, 'metadata', 'catalog_feed_2'),
+      (snap) => {
+        setFeedOverflowMap(snap.exists() ? decodeFeedItems(snap.data()?.items) : {});
+      },
+      (err) => {
+        console.warn('Realtime catalog_feed_2 sync warning:', err);
+      }
+    );
+    return () => unsub();
+  }, [hasFeedOverflow]);
 
   const [asyncSeedProducts, setAsyncSeedProducts] = useState<Product[]>(SEED_PRODUCTS);
 
@@ -553,12 +547,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (Array.isArray(data) && data.length > 0) {
             setAsyncSeedProducts(data);
           }
-          setProductsLoading(false);
+          setSeedLoaded(true);
         }
       })
       .catch((err) => {
         console.warn('Async products load fallback:', err);
-        setProductsLoading(false);
+        setSeedLoaded(true);
       });
     return () => {
       cancelled = true;
@@ -614,9 +608,70 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, []);
 
+  const uploadDataUrlAsPhoto = useCallback(
+    async (dataUrl: string): Promise<string> => {
+      const cdnUrl = await uploadImageViaApiEndpoint(getAdminHash(), dataUrl);
+      if (cdnUrl) return cdnUrl;
+
+      const mimeType = extractDataUrlMime(dataUrl);
+      if (!mimeType || dataUrl.length > 275_000) {
+        throw new Error('Фото слишком тяжёлое или имеет неподдерживаемый формат.');
+      }
+
+      const photoId = createSafeDocId('img');
+      await commitCatalogBatch((batch) => {
+        batch.set(doc(db, 'product_photos', photoId), {
+          dataUrl,
+          mimeType,
+          createdAt: serverTimestamp(),
+        });
+      });
+      return `/api/photo?id=${photoId}`;
+    },
+    [commitCatalogBatch]
+  );
+
+  const prepareImagesForBatch = useCallback(
+    async (
+      rawImages: string[]
+    ): Promise<{
+      urls: string[];
+      pendingPhotos: Array<{ photoId: string; dataUrl: string; mimeType: string }>;
+    }> => {
+      const urls: string[] = [];
+      const pendingPhotos: Array<{ photoId: string; dataUrl: string; mimeType: string }> = [];
+
+      for (const img of rawImages) {
+        if (!img.startsWith('data:')) {
+          urls.push(img);
+          continue;
+        }
+        const cdnUrl = await uploadImageViaApiEndpoint(getAdminHash(), img);
+        if (cdnUrl) {
+          urls.push(cdnUrl);
+          continue;
+        }
+        const mimeType = extractDataUrlMime(img);
+        if (!mimeType || img.length > 275_000) {
+          throw new Error('Фото слишком тяжёлое или имеет неподдерживаемый формат.');
+        }
+        const photoId = createSafeDocId('img');
+        pendingPhotos.push({ photoId, dataUrl: img, mimeType });
+        urls.push(`/api/photo?id=${photoId}`);
+      }
+
+      return { urls, pendingPhotos };
+    },
+    []
+  );
+
   const updateHeroSettings = useCallback(
     async (settings: Partial<HeroSettings>) => {
       const next = { ...heroSettingsRef.current, ...settings };
+      if (next.bannerImage && next.bannerImage.startsWith('data:')) {
+        next.bannerImage = await uploadDataUrlAsPhoto(next.bannerImage);
+      }
+
       setHeroSettings(next);
       try {
         window.localStorage.setItem(LOCAL_HERO_KEY, JSON.stringify(next));
@@ -634,7 +689,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
       showToast('Настройки главной страницы сохранены для всех пользователей');
     },
-    [commitCatalogBatch, showToast]
+    [uploadDataUrlAsPhoto, commitCatalogBatch, showToast]
   );
 
   const resetHeroSettings = useCallback(async () => {
@@ -770,7 +825,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [publishedFirestoreProducts, setPublishedFirestoreProducts] = useState<Product[]>([]);
   const [adminFirestoreProducts, setAdminFirestoreProducts] = useState<Product[]>([]);
-  const [productsLoading, setProductsLoading] = useState(true);
+  const productsLoading = !(seedLoaded && feedLoaded);
 
   const [cart, setCart] = useState<CartItem[]>(() => loadLocalArray<CartItem>(LOCAL_CART_KEY));
   const [fittingIds, setFittingIds] = useState<string[]>(() =>
@@ -887,31 +942,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => window.clearTimeout(timeout);
   }, [cart, user, authReady]);
 
-  // Public storefront listener: strictly published products only (matches firestore.rules)
-  useEffect(() => {
-    const q = query(collection(db, 'products'), where('status', '==', 'published'));
-    const unsub = onSnapshot(
-      q,
-      (snapshot) => {
-        const loaded: Product[] = snapshot.docs
-          .map((d) => ({
-            id: d.id,
-            ...(d.data() as Omit<Product, 'id'>),
-          }))
-          .sort((a, b) => {
-            const ta = (a.createdAt as { seconds?: number })?.seconds || 0;
-            const tb = (b.createdAt as { seconds?: number })?.seconds || 0;
-            return tb - ta;
-          });
-        setPublishedFirestoreProducts(loaded);
-      },
-      (error) => {
-        console.warn('Products snapshot fallback to local/seed items:', error);
-      }
-    );
-    return () => unsub();
-  }, []);
-
   // Authenticated user's personal order history
   useEffect(() => {
     if (!authReady || !user) return;
@@ -935,9 +965,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => unsub();
   }, [authReady, user]);
 
-  // Admin-only listeners: all products (including drafts) & all orders
+  // Admin-only listeners for bootstrapped Google admins: full /products & /orders collections
   useEffect(() => {
-    if (!authReady || !user || !isAdmin) {
+    if (!authReady || !user || !user.emailVerified || !isAdmin) {
       setAdminFirestoreProducts([]);
       setAdminOrders([]);
       return;
@@ -969,8 +999,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [authReady, user, isAdmin]);
 
+  const publishedFeedProducts = useMemo(
+    () => buildFeedProductList(feedItemsMap, feedOverflowMap),
+    [feedItemsMap, feedOverflowMap]
+  );
+
   const usingFallbackSeed =
     !productsLoading &&
+    publishedFeedProducts.length === 0 &&
     publishedFirestoreProducts.length === 0 &&
     adminFirestoreProducts.length === 0;
 
@@ -1000,6 +1036,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
 
+      if (includeDrafts) {
+        for (const [id, override] of Object.entries(productOverrides)) {
+          if (seen.has(id) || deletedSet.has(id)) continue;
+          if (typeof override.title !== 'string' || !Array.isArray(override.images)) continue;
+          seen.add(id);
+          merged.unshift({
+            id,
+            ...(override as Omit<Product, 'id'>),
+            inStock:
+              stockOverrides[id] !== undefined
+                ? stockOverrides[id]
+                : Boolean(override.inStock ?? true),
+          });
+        }
+      }
+
       return merged;
     },
     [deletedIds, productOverrides, stockOverrides]
@@ -1009,8 +1061,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     () =>
       mergeCatalogProducts(
         [
-          customProducts,
+          publishedFeedProducts,
           publishedFirestoreProducts,
+          customProducts,
           firestoreCustomProducts,
           deployedCustomProducts,
           asyncSeedProducts,
@@ -1019,8 +1072,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ),
     [
       mergeCatalogProducts,
-      customProducts,
+      publishedFeedProducts,
       publishedFirestoreProducts,
+      customProducts,
       firestoreCustomProducts,
       deployedCustomProducts,
       asyncSeedProducts,
@@ -1031,9 +1085,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     () =>
       mergeCatalogProducts(
         [
-          customProducts,
+          publishedFeedProducts,
           adminFirestoreProducts,
           publishedFirestoreProducts,
+          customProducts,
           firestoreCustomProducts,
           deployedCustomProducts,
           asyncSeedProducts,
@@ -1042,14 +1097,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ),
     [
       mergeCatalogProducts,
-      customProducts,
+      publishedFeedProducts,
       adminFirestoreProducts,
       publishedFirestoreProducts,
+      customProducts,
       firestoreCustomProducts,
       deployedCustomProducts,
       asyncSeedProducts,
     ]
   );
+
+  const adminProductsRef = useRef<Product[]>(adminProducts);
+  adminProductsRef.current = adminProducts;
 
   const validFittingCount = useMemo(() => {
     const productSet = new Set(products.map((p) => p.id));
@@ -1323,17 +1382,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       existingId?: string
     ): Promise<string> => {
       const productId = existingId || createSafeDocId('prod');
-      const cleanImages = data.images
+      const rawSanitizedImages = data.images
         .map((url) => sanitizeImageUrl(url))
         .filter((url): url is string => Boolean(url))
         .slice(0, SCHEMA_LIMITS.productImagesMax);
 
-      if (cleanImages.length === 0) {
+      if (rawSanitizedImages.length === 0) {
         throw new Error('Добавьте хотя бы одно корректное изображение товара.');
       }
 
+      const { urls: cleanImages, pendingPhotos } = await prepareImagesForBatch(rawSanitizedImages);
+
       const targetStatus: ProductStatus = data.status === 'draft' ? 'draft' : 'published';
       const cleanMeasurements = sanitizeMeasurements(data.measurements);
+      const nowMs = Date.now();
+      const existingFeedEntry =
+        feedItemsMapRef.current[productId] || feedOverflowMapRef.current[productId];
+      const createdAtMs = existingFeedEntry?.createdAtMs || nowMs;
 
       const firestorePayload = {
         title: data.title.trim().slice(0, SCHEMA_LIMITS.productTitleMax),
@@ -1350,6 +1415,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         inStock: Boolean(data.inStock),
         featured: Boolean(data.featured),
         updatedAt: serverTimestamp(),
+      };
+
+      const feedEntry: FeedProductEntry = {
+        title: firestorePayload.title,
+        description: firestorePayload.description,
+        price: firestorePayload.price,
+        currency: firestorePayload.currency,
+        category: firestorePayload.category,
+        sizes: firestorePayload.sizes,
+        images: firestorePayload.images,
+        era: firestorePayload.era,
+        condition: firestorePayload.condition,
+        ...(cleanMeasurements ? { measurements: cleanMeasurements } : {}),
+        status: firestorePayload.status,
+        inStock: firestorePayload.inStock,
+        featured: firestorePayload.featured,
+        createdAtMs,
+        updatedAtMs: nowMs,
       };
 
       const localOverrideData: Partial<Product> = {
@@ -1383,11 +1466,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         status: firestorePayload.status,
         inStock: firestorePayload.inStock,
         featured: firestorePayload.featured,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(createdAtMs).toISOString(),
+        updatedAt: new Date(nowMs).toISOString(),
       };
 
       let docExistsInProducts =
+        Boolean(existingFeedEntry) ||
         adminFirestoreProducts.some((p) => p.id === productId) ||
         publishedFirestoreProducts.some((p) => p.id === productId);
 
@@ -1396,15 +1480,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const snap = await getDoc(doc(db, 'products', productId));
           docExistsInProducts = snap.exists();
         } catch {
-          // If unreadable (e.g. non-Google admin reading a draft), fall back to create/catalog_state
           docExistsInProducts = false;
         }
       }
 
+      const targetFeedDocId = selectFeedShardForProduct(
+        productId,
+        feedItemsMapRef.current,
+        feedOverflowMapRef.current
+      );
       const productRef = doc(db, 'products', productId);
       const catalogStateRef = doc(db, 'metadata', 'catalog_state');
+      const targetFeedRef = doc(db, 'metadata', targetFeedDocId);
 
       await commitCatalogBatch((batch) => {
+        for (const pending of pendingPhotos) {
+          batch.set(doc(db, 'product_photos', pending.photoId), {
+            dataUrl: pending.dataUrl,
+            mimeType: pending.mimeType,
+            createdAt: serverTimestamp(),
+          });
+        }
+
         if (docExistsInProducts) {
           batch.update(productRef, firestorePayload);
         } else {
@@ -1414,7 +1511,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           });
         }
 
-        // Keep stockOverrides synced, and avoid duplicating large data URLs in catalog_state
         batch.set(
           catalogStateRef,
           {
@@ -1445,7 +1541,50 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           },
           { merge: true }
         );
+
+        batch.set(
+          targetFeedRef,
+          {
+            items: {
+              [productId]: targetStatus === 'published' ? feedEntry : deleteField(),
+            },
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        if (targetStatus === 'published' && targetFeedDocId === 'catalog_feed_2') {
+          batch.set(
+            doc(db, 'metadata', 'catalog_feed'),
+            { hasNext: true, updatedAt: serverTimestamp() },
+            { merge: true }
+          );
+        }
       });
+
+      const updateFeedMapState = (
+        setter: React.Dispatch<React.SetStateAction<Record<string, FeedProductEntry>>>,
+        persistPrimary: boolean
+      ) => {
+        setter((prev) => {
+          const next = { ...prev };
+          if (targetStatus === 'published') next[productId] = feedEntry;
+          else delete next[productId];
+          if (persistPrimary) {
+            try {
+              window.localStorage.setItem(LOCAL_FEED_KEY, JSON.stringify(next));
+            } catch {}
+          }
+          return next;
+        });
+      };
+
+      if (targetFeedDocId === 'catalog_feed_2') {
+        setHasFeedOverflow(true);
+        updateFeedMapState(setFeedOverflowMap, false);
+      } else {
+        updateFeedMapState(setFeedItemsMap, true);
+      }
 
       if (targetStatus === 'published') {
         setPublishedFirestoreProducts((prev) => {
@@ -1508,20 +1647,63 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       );
       return productId;
     },
-    [adminFirestoreProducts, publishedFirestoreProducts, commitCatalogBatch, showToast]
+    [
+      adminFirestoreProducts,
+      publishedFirestoreProducts,
+      prepareImagesForBatch,
+      commitCatalogBatch,
+      showToast,
+    ]
   );
 
   const setProductStatus = useCallback(
     async (productId: string, status: ProductStatus) => {
       const prevStatus = productOverrides[productId]?.status;
+      const existingProduct = adminProductsRef.current.find((p) => p.id === productId);
+      const targetFeedDocId = selectFeedShardForProduct(
+        productId,
+        feedItemsMapRef.current,
+        feedOverflowMapRef.current
+      );
+      const nowMs = Date.now();
+
       setProductOverrides((prev) => {
-        const existing = prev[productId] || {};
-        const next = { ...prev, [productId]: { ...existing, status } };
+        const next = { ...prev };
+        if (status === 'published' && (feedItemsMapRef.current[productId] || existingProduct)) {
+          delete next[productId];
+        } else {
+          const existing = prev[productId] || {};
+          next[productId] = { ...existing, status };
+        }
         try {
           window.localStorage.setItem(LOCAL_OVERRIDES_KEY, JSON.stringify(next));
         } catch {}
         return next;
       });
+
+      const publishedFeedEntry: FeedProductEntry | null =
+        status === 'published' && existingProduct
+          ? {
+              title: existingProduct.title,
+              description: existingProduct.description,
+              price: existingProduct.price,
+              currency: existingProduct.currency,
+              category: existingProduct.category,
+              sizes: existingProduct.sizes,
+              images: existingProduct.images.filter((u) => !u.startsWith('data:')),
+              era: existingProduct.era,
+              condition: existingProduct.condition,
+              ...(existingProduct.measurements ? { measurements: existingProduct.measurements } : {}),
+              status: 'published',
+              inStock: existingProduct.inStock,
+              featured: existingProduct.featured,
+              createdAtMs:
+                feedItemsMapRef.current[productId]?.createdAtMs ||
+                feedOverflowMapRef.current[productId]?.createdAtMs ||
+                nowMs,
+              updatedAtMs: nowMs,
+            }
+          : null;
 
       try {
         await commitCatalogBatch((batch) => {
@@ -1529,12 +1711,36 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             doc(db, 'metadata', 'catalog_state'),
             {
               productOverrides: {
-                [productId]: { status },
+                [productId]:
+                  status === 'published' && publishedFeedEntry
+                    ? deleteField()
+                    : { status },
               },
               updatedAt: serverTimestamp(),
             },
             { merge: true }
           );
+
+          if (status === 'published' && publishedFeedEntry) {
+            batch.set(
+              doc(db, 'metadata', targetFeedDocId),
+              {
+                items: { [productId]: publishedFeedEntry },
+                updatedAt: serverTimestamp(),
+              },
+              { merge: true }
+            );
+          } else if (status === 'draft') {
+            batch.set(
+              doc(db, 'metadata', targetFeedDocId),
+              {
+                items: { [productId]: deleteField() },
+                updatedAt: serverTimestamp(),
+              },
+              { merge: true }
+            );
+          }
+
           if (
             publishedFirestoreProducts.some((p) => p.id === productId) ||
             adminFirestoreProducts.some((p) => p.id === productId)
@@ -1545,6 +1751,36 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             });
           }
         });
+
+        if (status === 'published' && publishedFeedEntry) {
+          const setter = targetFeedDocId === 'catalog_feed_2' ? setFeedOverflowMap : setFeedItemsMap;
+          setter((prev) => {
+            const next = { ...prev, [productId]: publishedFeedEntry };
+            if (targetFeedDocId === 'catalog_feed') {
+              try {
+                window.localStorage.setItem(LOCAL_FEED_KEY, JSON.stringify(next));
+              } catch {}
+            }
+            return next;
+          });
+        } else if (status === 'draft') {
+          setFeedItemsMap((prev) => {
+            if (!prev[productId]) return prev;
+            const next = { ...prev };
+            delete next[productId];
+            try {
+              window.localStorage.setItem(LOCAL_FEED_KEY, JSON.stringify(next));
+            } catch {}
+            return next;
+          });
+          setFeedOverflowMap((prev) => {
+            if (!prev[productId]) return prev;
+            const next = { ...prev };
+            delete next[productId];
+            return next;
+          });
+        }
+
         showToast(
           status === 'published' ? 'Товар опубликован на сайте' : 'Товар переведён в черновики'
         );
@@ -1626,6 +1862,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const deleteProduct = useCallback(
     async (productId: string) => {
+      const targetItem = adminProductsRef.current.find((p) => p.id === productId);
+      const targetPhotoIds = (targetItem?.images || [])
+        .map((url) => extractApiPhotoId(url))
+        .filter((id): id is string => Boolean(id));
+
+      const stillReferencedPhotoIds = new Set<string>();
+      if (targetPhotoIds.length > 0) {
+        for (const other of adminProductsRef.current) {
+          if (other.id === productId) continue;
+          for (const url of other.images || []) {
+            const pid = extractApiPhotoId(url);
+            if (pid) stillReferencedPhotoIds.add(pid);
+          }
+        }
+      }
+
+      const photoIdsToDelete = targetPhotoIds.filter((pid) => !stillReferencedPhotoIds.has(pid));
+      const inOverflow = Boolean(feedOverflowMapRef.current[productId]);
+      const inPrimary = Boolean(feedItemsMapRef.current[productId]);
+
       await commitCatalogBatch((batch) => {
         batch.set(
           doc(db, 'metadata', 'catalog_state'),
@@ -1637,9 +1893,47 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           },
           { merge: true }
         );
+        if (inPrimary || !inOverflow) {
+          batch.set(
+            doc(db, 'metadata', 'catalog_feed'),
+            {
+              items: { [productId]: deleteField() },
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+        }
+        if (inOverflow) {
+          batch.set(
+            doc(db, 'metadata', 'catalog_feed_2'),
+            {
+              items: { [productId]: deleteField() },
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+        }
         batch.delete(doc(db, 'products', productId));
+        for (const photoId of photoIdsToDelete) {
+          batch.delete(doc(db, 'product_photos', photoId));
+        }
       });
 
+      setFeedItemsMap((prev) => {
+        if (!prev[productId]) return prev;
+        const next = { ...prev };
+        delete next[productId];
+        try {
+          window.localStorage.setItem(LOCAL_FEED_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      setFeedOverflowMap((prev) => {
+        if (!prev[productId]) return prev;
+        const next = { ...prev };
+        delete next[productId];
+        return next;
+      });
       setCustomProducts((prev) => {
         const next = prev.filter((p) => p.id !== productId);
         try {
@@ -1660,26 +1954,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [commitCatalogBatch, showToast]
   );
 
-  const uploadProductImage = useCallback(async (file: File): Promise<string> => {
-    if (!auth.currentUser) {
-      return compressImageFileToDataUrl(file, { maxDim: 900, quality: 0.78 });
-    }
-    if (!file.type.startsWith('image/')) {
-      throw new Error('Поддерживаются только изображения (JPG, PNG, WEBP).');
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      return compressImageFileToDataUrl(file, { maxDim: 900, quality: 0.78 });
-    }
-    try {
-      const ext = file.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
-      const filePath = `products/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const storageRef = ref(storage, filePath);
-      await uploadBytes(storageRef, file);
-      return getDownloadURL(storageRef);
-    } catch {
-      return compressImageFileToDataUrl(file, { maxDim: 900, quality: 0.78 });
-    }
-  }, []);
+  const uploadProductImage = useCallback(
+    async (file: File, options?: { maxDim?: number; quality?: number }): Promise<string> => {
+      const compressed = await compressImageFileToDataUrl(file, {
+        maxDim: options?.maxDim ?? 960,
+        quality: options?.quality ?? 0.78,
+      });
+      return uploadDataUrlAsPhoto(compressed);
+    },
+    [uploadDataUrlAsPhoto]
+  );
 
   const importVkDrafts = useCallback(
     async (imageUrls: string[]): Promise<number> => {

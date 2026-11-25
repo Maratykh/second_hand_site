@@ -1,9 +1,21 @@
 /**
- * Client-side image resize & compression helper so admin photo uploads
- * never rely solely on unauthenticated Firebase Storage and stay well
- * within Firestore's document size limits.
+ * Client-side image resize & WebP compression helper so product/banner photos
+ * stay lightweight (~45-120 KB) for both CDN upload and Edge-cached Firestore fallback.
  */
-const MAX_ENCODED_DATA_URL_LENGTH = 420_000;
+const MAX_ENCODED_DATA_URL_LENGTH = 240_000;
+
+export function extractDataUrlMime(
+  dataUrl: string
+): 'image/webp' | 'image/jpeg' | 'image/png' | null {
+  const match = dataUrl.match(/^data:(image\/(?:webp|jpeg|jpg|png));base64,/i);
+  if (!match) return null;
+  const lower = match[1].toLowerCase();
+  if (lower === 'image/jpg') return 'image/jpeg';
+  if (lower === 'image/webp' || lower === 'image/jpeg' || lower === 'image/png') {
+    return lower;
+  }
+  return null;
+}
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -81,16 +93,19 @@ export async function compressImageFileToDataUrl(
   const rawDataUrl = await readFileAsDataUrl(file);
   const img = await loadHtmlImage(rawDataUrl);
 
-  let compressed = renderCompressedDataUrl(img, maxDim, quality);
-  if (compressed.length > MAX_ENCODED_DATA_URL_LENGTH) {
-    compressed = renderCompressedDataUrl(img, Math.min(maxDim, 720), 0.68);
-  }
-  if (compressed.length > MAX_ENCODED_DATA_URL_LENGTH) {
-    compressed = renderCompressedDataUrl(img, 560, 0.58);
-  }
-  if (compressed.length > MAX_ENCODED_DATA_URL_LENGTH) {
-    throw new Error('Изображение слишком тяжёлое даже после сжатия. Выберите другое фото.');
+  const steps: Array<[number, number]> = [
+    [maxDim, quality],
+    [Math.min(maxDim, 800), 0.7],
+    [720, 0.62],
+    [560, 0.54],
+  ];
+
+  for (const [stepDim, stepQuality] of steps) {
+    const candidate = renderCompressedDataUrl(img, stepDim, stepQuality);
+    if (candidate.length <= MAX_ENCODED_DATA_URL_LENGTH) {
+      return candidate;
+    }
   }
 
-  return compressed;
+  throw new Error('Изображение слишком тяжёлое даже после сжатия. Выберите другое фото.');
 }

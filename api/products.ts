@@ -1,6 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { verifyAdminHashViaFirestore } from './_lib/firebaseRest';
 
 interface ProductPayload {
+  adminHash?: string;
   title: string;
   price: number;
   category: string;
@@ -90,10 +92,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json([]);
   }
 
-  // POST: Add new custom product
+  // POST: Add new custom product (requires verified admin session hash)
   if (req.method === 'POST') {
     try {
       const body = req.body as ProductPayload;
+      const adminHash = typeof body?.adminHash === 'string' ? body.adminHash.trim() : '';
+      if (!(await verifyAdminHashViaFirestore(adminHash))) {
+        return res.status(401).json({ error: 'Требуется авторизация администратора' });
+      }
       if (!body || !body.title || !body.price) {
         return res.status(400).json({ error: 'Пожалуйста, укажите название и цену вещи' });
       }
