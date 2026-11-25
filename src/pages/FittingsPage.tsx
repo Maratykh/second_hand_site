@@ -13,7 +13,7 @@ import { BRAND_INFO, CATEGORY_LABELS } from '../types/store';
 import { formatMeasurementValue, formatPriceBYN } from '../utils/storeLogic';
 import { SafeImage } from '../components/SafeImage';
 import type { AppRoute } from '../components/Header';
-import zombieSuitUrl from '../assets/images/zombie_suit.png';
+import zombieSuitUrl from '../assets/images/zombie_suit.webp';
 
 interface FittingsPageProps {
   initialTab?: 'fittings' | 'favorites';

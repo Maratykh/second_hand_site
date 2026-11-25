@@ -1,6 +1,6 @@
 import React from 'react';
-import pirateZombieUrl from '../assets/images/zombie_mascot.png';
-import suitZombieUrl from '../assets/images/zombie_suit.png';
+import pirateZombieUrl from '../assets/images/zombie_mascot.webp';
+import suitZombieUrl from '../assets/images/zombie_suit.webp';
 
 export const ZombieBackgroundMascots: React.FC = () => {
   return (
