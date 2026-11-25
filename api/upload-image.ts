@@ -11,8 +11,10 @@ const FIREBASE_DB_ID =
 const FIREBASE_API_KEY =
   process.env.FIREBASE_API_KEY || 'AIzaSyBosVDYGZUauLmHZna4Jw9Yo7TjAeEznuw';
 
-const GITHUB_REPO = process.env.GITHUB_REPO || 'Maratykh/second_hand_sitea';
-const GITHUB_BRANCH = process.env.GITHUB_BRANCH || 'main';
+// Only commit to GitHub + jsDelivr when an explicit PUBLIC media repo is configured;
+// private code repositories return 404 on jsDelivr/raw CDN.
+const GITHUB_MEDIA_REPO = process.env.GITHUB_MEDIA_REPO;
+const GITHUB_MEDIA_BRANCH = process.env.GITHUB_MEDIA_BRANCH || 'main';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const DATA_URL_RE = /^data:(image\/(?:webp|jpeg|jpg|png));base64,([A-Za-z0-9+/=]+)$/i;
 
@@ -61,8 +63,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Invalid or oversized image payload' });
   }
 
-  if (!GITHUB_TOKEN) {
-    return res.status(200).json({ uploaded: false, reason: 'no_github_token' });
+  if (!GITHUB_TOKEN || !GITHUB_MEDIA_REPO) {
+    return res.status(200).json({ uploaded: false, reason: 'use_edge_photo_proxy' });
   }
 
   const mime = match[1].toLowerCase();
@@ -70,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const rawBase64 = match[2];
   const photoId = `img_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
   const repoPath = `uploads/${photoId}.${ext}`;
-  const ghUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/${repoPath}`;
+  const ghUrl = `https://api.github.com/repos/${GITHUB_MEDIA_REPO}/contents/${repoPath}`;
 
   try {
     const putRes = await fetch(ghUrl, {
@@ -84,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       body: JSON.stringify({
         message: `chore(media): upload ${photoId}.${ext} [skip ci]`,
         content: rawBase64,
-        branch: GITHUB_BRANCH,
+        branch: GITHUB_MEDIA_BRANCH,
       }),
     });
 
@@ -93,8 +95,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const putData = (await putRes.json()) as { commit?: { sha?: string } };
-    const ref = putData.commit?.sha || GITHUB_BRANCH;
-    const cdnUrl = `https://cdn.jsdelivr.net/gh/${GITHUB_REPO}@${ref}/${repoPath}`;
+    const ref = putData.commit?.sha || GITHUB_MEDIA_BRANCH;
+    const cdnUrl = `https://cdn.jsdelivr.net/gh/${GITHUB_MEDIA_REPO}@${ref}/${repoPath}`;
 
     return res.status(200).json({
       uploaded: true,
